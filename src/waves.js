@@ -1,6 +1,12 @@
 var WAVES = (function () {
     "use strict";
 
+    var H = 0,
+        V = 1,
+        CELL_SIZE = V,
+        FORCE_SCALE = 1,
+        DECAY_TIME = 5000;
+
     function View() {
         this.clearColor = [0, 0, 0, 1];
         this.maximize = true;
@@ -18,6 +24,45 @@ var WAVES = (function () {
         this.eyeHeight = 0.25;
 
         var self = this;
+
+        this.cellsX = 200;
+        this.cellsY = 200;
+        this.cellCount = this.cellsX * this.cellsY;
+
+        this.cells = new Float32Array(this.cellCount * CELL_SIZE);
+    }
+
+    View.prototype.propagate = function (elapsed) {
+        var i = 0,
+            lastX = this.cellsX - 1,
+            lastY = this.cellsY - 1,
+            decay = (DECAY_TIME - elapsed) / DECAY_TIME;
+
+        for (var y = 0; y < this.cellsY; ++y) {
+            var yLow = y > 0 ? -1 : 0,
+                yHi = y < lastY ? 1 : 0;
+            for(var x = 0; x < this.cellsX; ++x) {
+                var hSum = -this.cells[i + H],
+                    count = 0,
+                    xHi = x < lastX ? 1 : 0,
+                    xLow = x > 0 ? -1 : 0;
+
+                for (var dy = yLow; dy <= yHi; ++dy) {
+                    var yOffset = dy * this.cellsX;
+                    for (var dx = xLow; dx <= xHi; ++dx) {
+                        ++count;
+                        hSum += this.cells[i + ((dx + yOffset) * CELL_SIZE) + H];
+                    }
+                }
+
+                var hDiff = (hSum / count) - this.cells[i + H],
+                    prevV = this.cells[i + V],
+                    newV = prevV * decay + hDiff * FORCE_SCALE * elapsed;
+                this.cells[i + V] = newV;
+                this.cells[i + H] += newV * elapsed;
+                i += CELL_SIZE;
+            }
+        }
     }
 
     View.prototype.setRoom = function (room) {
@@ -40,6 +85,7 @@ var WAVES = (function () {
         if (keyboard.isShiftDown()) {
         } else if(keyboard.isAltDown()) {
         }
+        this.propagate(this.even);
     };
 
     View.prototype.render = function (room, width, height) {
@@ -49,8 +95,7 @@ var WAVES = (function () {
             this.program = {
                 shader: shader,
                 vertexPosition: room.bindVertexAttribute(shader, "aPos"),
-                vertexUV: room.bindVertexAttribute(shader, "aUV"),
-                textureVariable: "uSampler"
+                vertexColor: room.bindVertexAttribute(shader, "aColor"),
             };
             room.viewer.far = 20;
             room.gl.enable(room.gl.CULL_FACE);
@@ -92,29 +137,19 @@ var WAVES = (function () {
         }
     };
 
-    function calculateVertex(mesh, parameters, x, y, depth) {
-        var pixel = new R3.V(
-            depth * (parameters.xOffset + x) / parameters.xFactor,
-            depth * (parameters.yOffset - y) / parameters.yFactor,
-            -depth
-        );
-        var normal = pixel.normalized();
-        mesh.addVertex(pixel, normal, x * parameters.uScale, y * parameters.vScale);
-    }
-
     function addTris(mesh, index, stride) {
         mesh.addTri(index,    index + stride, index + 1);
         mesh.addTri(index + 1,index + stride, index + stride + 1);
     }
 
     View.prototype.constructGrid = function () {
-        var height = scene.height,
+        var height = this.cellsY,
             width = scene.width,
             xStride = 1,
-            yStride = 1
+            yStride = 1,
             meshes = [];
 
-        for (var y = 0; y <= height; y += yStride) {
+        for (var y = 0; y < this.cellsY; y += yStride) {
             var oldMesh = null,
                 generateTris = y < height;
             if (generateTris && (y % rowsPerChunk) === 0) {
