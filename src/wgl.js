@@ -331,11 +331,18 @@ var WGL = (function () {
                 0.0,  0.0,
                 1.0,  1.0,
                 1.0,  0.0
-            ];
+            ],
+            colors = [
+                1.0,  1.0, 1.0, 1.0,
+                1.0,  1.0, 1.0, 1.0,
+                1.0,  1.0, 1.0, 1.0,
+                1.0,  1.0, 1.0, 1.0
+            ]
 
         program.batch = new BLIT.Batch("images/");
         program.square = this.setupFloatBuffer(vertices);
         program.squareUVs = this.setupFloatBuffer(uvs);
+        program.squareColors = this.setupFloatBuffer(colors);
         program.squareTexture = this.loadTexture(program.batch, "uv.png");
         program.batch.commit();
     };
@@ -344,8 +351,14 @@ var WGL = (function () {
         this.bindTexture(setup.shader, setup.textureVariable, setup.squareTexture);
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, setup.square);
         this.gl.vertexAttribPointer(setup.vertexPosition, 3, this.gl.FLOAT, false, 0, 0);
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, setup.squareUVs);
-        this.gl.vertexAttribPointer(setup.vertexUV, 2, this.gl.FLOAT, false, 0, 0);
+        if (setup.vertexUV !== null) {
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, setup.squareUVs);
+            this.gl.vertexAttribPointer(setup.vertexUV, 2, this.gl.FLOAT, false, 0, 0);
+        }
+        if (setup.vertexColor !== null) {
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, setup.squareColors);
+            this.gl.vertexAttribPointer(setup.vertexColor, 2, this.gl.FLOAT, false, 0, 0);
+        }
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     };
 
@@ -357,7 +370,8 @@ var WGL = (function () {
                 shader: program,
                 vertexPosition: this.bindVertexAttribute(program, "aPos"),
                 vertexUV: this.bindVertexAttribute(program, "aUV"),
-                vertexColor: null
+                vertexColor: null,
+                textureVariable: "uSampler"
             };
 
             this.setupDrawTest(this.testSetup);

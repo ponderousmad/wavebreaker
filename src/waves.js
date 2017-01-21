@@ -90,17 +90,23 @@ var WAVES = (function () {
     };
 
     View.prototype.render = function (room, width, height) {
+        room.drawTest();
+        /*
         room.clear(this.clearColor);
         if (this.program === null) {
             var shader = room.programFromElements("vertex-test", "fragment-test");
             this.program = {
                 shader: shader,
                 vertexPosition: room.bindVertexAttribute(shader, "aPos"),
-                vertexUV: null,
+                vertexUV: room.bindVertexAttribute(shader, "aUV"),
                 vertexColor: room.bindVertexAttribute(shader, "aColor"),
+                textureVariable: "uSampler"
             };
-            room.viewer.far = 20;
+            room.setupDrawTest(this.program);
             room.gl.enable(room.gl.CULL_FACE);
+        }
+        if (!this.program.batch.loaded) {
+            return;
         }
         if (room.viewer.inVR()) {
             var vrFrame = room.viewer.vrFrame(),
@@ -123,12 +129,18 @@ var WAVES = (function () {
             room.viewer.submitVR();
         }
         if (room.viewer.showOnPrimary()) {
+            /*
             room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
             var offset = R3.makeRotateQ(room.viewer.orientation).transformP(this.center);
             room.viewer.position = R3.addVectors(offset, new R3.V(0, 0, -this.distance));
             room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
             this.drawMeshes(room);
+            * /
+            room.viewer.position.set(0, 0, 2);
+            room.setupView(this.program.shader, "canvas", "uMVMatrix", "uPMatrix");
+            room.drawTestSquare(this.program);
         }
+        */
     };
 
     View.prototype.drawMeshes = function (room) {
