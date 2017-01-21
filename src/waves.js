@@ -19,8 +19,8 @@ var WAVES = (function () {
         this.yAxisAngle = 0;
         this.xAxisAngle = 0;
         this.room = null;
-        this.distance = 1;
-        this.center = R3.origin();
+        this.distance = 100;
+        this.center = new R3.V(0, 0, 100);
         this.eyeHeight = 0.25;
 
         var self = this;
@@ -140,9 +140,9 @@ var WAVES = (function () {
     };
 
     function calculateVertex(mesh, x, y, xWidth, yWidth) {
-        var pixel = new R3.V(x, y, 0);
+        var v = new R3.V(x - xWidth / 2, y - yWidth / 2, 100);
         var normal = new R3.V(0, 0, 1);
-        mesh.addVertex(pixel, normal, x / xWidth, y / yWidth);
+        mesh.addVertex(v, normal, x / xWidth, y / yWidth, 1, 0, 0, 1);
     }
 
     function addTris(mesh, index, stride) {
@@ -168,11 +168,11 @@ var WAVES = (function () {
                 meshes.push(mesh);
             }
             for (var x = 0; x <= this.cellsX; x += xStride) {
-                calculateVertex(mesh, x, y, lastX, lastY, 1, 0, 0, 0);
                 var generateTri = generateTris && x < lastY;
                 if (generateTri) {
-                    addTris(mesh, mesh.index, 2);
+                    addTris(mesh, mesh.index, this.cellsX);
                 }
+                calculateVertex(mesh, x, y, lastX, lastY);
             }
        }
 
