@@ -5,8 +5,8 @@ var WAVES = (function () {
         H_ODD = 1,
         V = 2,
         CELL_SIZE = 3,
-        FORCE_SCALE = 0.004,
-        DECAY_TIME = 24.95;
+        FORCE_SCALE = 0.4,
+        DECAY_TIME = 200;
 
     function View() {
         this.clearColor = [0, 0, 0, 1];
@@ -33,6 +33,8 @@ var WAVES = (function () {
         this.cells = new Float32Array(this.cellCount * CELL_SIZE);
         this.hA = H_EVEN;
         this.hB = H_ODD;
+
+        this.time = 0;
     }
 
     function updateMeshVertex(mesh, index, z, b) {
@@ -42,14 +44,14 @@ var WAVES = (function () {
         mesh.updated = true;
     };
 
-    View.prototype.propagate = function (elapsed) {
+    View.prototype.propagate = function (elapsed, force) {
         var index = 0,
             hIn = this.hA,
             hOut = this.hB,
             lastX = this.cellsX - 1,
             lastY = this.cellsY - 1,
             neighbours = 8,
-            decay = (DECAY_TIME - elapsed) / DECAY_TIME;
+            decay = Math.max(0, (DECAY_TIME - elapsed) / DECAY_TIME);
         for (var y = 0; y < this.cellsY; ++y) {
             var yLow = y > 0 ? -1 : 0,
                 yHi = y < lastY ? 1 : 0;
@@ -70,11 +72,18 @@ var WAVES = (function () {
                     }
                 }
 
-                var hDiff = (hSum / neighbours) - this.cells[i + hIn],
+                var hDiff = (hSum / neighbours) - prevH,
                     prevV = this.cells[i + V],
-                    newV = prevV * decay + hDiff * FORCE_SCALE * elapsed,
+                    deltaV = hDiff * FORCE_SCALE * elapsed,
+                    newV = prevV * decay + deltaV,
                     newH = this.cells[i + hIn] + newV * elapsed;
                 newH = Math.max(-1, Math.min(1, newH));
+
+                if (force && x == this.cellsX / 4 && y == this.cellsY / 4) {
+                    newV = 0;
+                    newH = Math.sin(this.time/20 * Math.PI) * 0.0005;
+                }
+
                 this.cells[i + hOut] = newH;
                 this.cells[i + V] = newV;
 
@@ -95,11 +104,13 @@ var WAVES = (function () {
     };
 
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
+        var fixedTime = 2,
+            force = false;
+        this.time += fixedTime;
         if (keyboard.isAsciiDown("S")) {
-            var middle = (this.cellsX / 2 ) + (this.cellsX * this.cellsY / 2);
-            this.cells[middle * CELL_SIZE + this.hA] = 0.01;
+            force = true;
         }
-        this.propagate(20);
+        this.propagate(2, force);
         console.log("Propagated: ", elapsed);
 
         if (pointer.wheelY) {
