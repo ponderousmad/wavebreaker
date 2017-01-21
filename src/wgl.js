@@ -68,10 +68,12 @@ var WGL = (function () {
         this.vrDisplay = null;
         this.size = new R2.V(0, 0);
         this.safeSize = new R2.V(0, 0);
+        this.vrFrameData = null;
     }
 
     Viewer.prototype.setVRDisplay = function (vrDisplay) {
         this.vrDisplay = vrDisplay;
+        this.vrFrameData = new VRFrameData();
     };
 
     Viewer.prototype.inVR = function () {
@@ -322,22 +324,22 @@ var WGL = (function () {
     Room.prototype.setupDrawTest = function (program) {
         var vertices = [
                 -1.0, -1.0, 0.0,
-                -1.0,  1.0, 0.0,
                  1.0, -1.0, 0.0,
+                -1.0,  1.0, 0.0,
                  1.0,  1.0, 0.0
             ],
             uvs = [
                 0.0,  1.0,
-                0.0,  0.0,
                 1.0,  1.0,
+                0.0,  0.0,
                 1.0,  0.0
             ],
             colors = [
-                1.0,  1.0, 1.0, 1.0,
-                1.0,  1.0, 1.0, 1.0,
-                1.0,  1.0, 1.0, 1.0,
-                1.0,  1.0, 1.0, 1.0
-            ]
+                1.0, 0.0, 1.0, 1.0,
+                1.0, 1.0, 0.0, 1.0,
+                0.0, 1.0, 1.0, 1.0,
+                1.0, 1.0, 1.0, 1.0
+            ];
 
         program.batch = new BLIT.Batch("images/");
         program.square = this.setupFloatBuffer(vertices);
@@ -357,7 +359,7 @@ var WGL = (function () {
         }
         if (setup.vertexColor !== null) {
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, setup.squareColors);
-            this.gl.vertexAttribPointer(setup.vertexColor, 2, this.gl.FLOAT, false, 0, 0);
+            this.gl.vertexAttribPointer(setup.vertexColor, 4, this.gl.FLOAT, false, 0, 0);
         }
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     };
@@ -370,7 +372,7 @@ var WGL = (function () {
                 shader: program,
                 vertexPosition: this.bindVertexAttribute(program, "aPos"),
                 vertexUV: this.bindVertexAttribute(program, "aUV"),
-                vertexColor: null,
+                vertexColor: this.bindVertexAttribute(program, "aColor"),
                 textureVariable: "uSampler"
             };
 

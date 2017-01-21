@@ -90,8 +90,6 @@ var WAVES = (function () {
     };
 
     View.prototype.render = function (room, width, height) {
-        room.drawTest();
-        /*
         room.clear(this.clearColor);
         if (this.program === null) {
             var shader = room.programFromElements("vertex-test", "fragment-test");
@@ -102,6 +100,7 @@ var WAVES = (function () {
                 vertexColor: room.bindVertexAttribute(shader, "aColor"),
                 textureVariable: "uSampler"
             };
+            room.viewer.position.set(0, 0, 2);
             room.setupDrawTest(this.program);
             room.gl.enable(room.gl.CULL_FACE);
         }
@@ -135,12 +134,10 @@ var WAVES = (function () {
             room.viewer.position = R3.addVectors(offset, new R3.V(0, 0, -this.distance));
             room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
             this.drawMeshes(room);
-            * /
-            room.viewer.position.set(0, 0, 2);
+            */
             room.setupView(this.program.shader, "canvas", "uMVMatrix", "uPMatrix");
             room.drawTestSquare(this.program);
         }
-        */
     };
 
     View.prototype.drawMeshes = function (room) {
