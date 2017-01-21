@@ -18,8 +18,8 @@ var WAVES = (function () {
         this.program = null;
         this.yAxisAngle = 0;
         this.xAxisAngle = 0;
-        this.vrToggleIDs = { enter: "enterVR", exit: "exitVR" };
         this.room = null;
+        this.distance = 1;
         this.center = R3.origin();
         this.eyeHeight = 0.25;
 
@@ -103,7 +103,7 @@ var WAVES = (function () {
         if (room.viewer.inVR()) {
             var vrFrame = room.viewer.vrFrame(),
                 pivot = new R3.V(0, 0, this.eyeHeight),
-                m = this.levelMatrix(pivot);
+                m = r3.identity();
             room.viewer.orientation.set(0, 0, 0, 1);
             room.viewer.position.set(0, 0, 0);
 
