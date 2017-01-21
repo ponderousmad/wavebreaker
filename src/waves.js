@@ -67,6 +67,7 @@ var WAVES = (function () {
 
     View.prototype.setRoom = function (room) {
         this.room = room;
+        this.meshes = this.constructGrid();
     };
 
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
@@ -95,6 +96,7 @@ var WAVES = (function () {
             this.program = {
                 shader: shader,
                 vertexPosition: room.bindVertexAttribute(shader, "aPos"),
+                vertexUV: null,
                 vertexColor: room.bindVertexAttribute(shader, "aColor"),
             };
             room.viewer.far = 20;
@@ -131,11 +133,17 @@ var WAVES = (function () {
 
     View.prototype.drawMeshes = function (room) {
         if (this.meshes !== null) {
-            for (var m = 0; m < this.meshes.length - (this.showCompass ? 0 : 1); ++m) {
+            for (var m = 0; m < this.meshes.length; ++m) {
                 room.drawMesh(this.meshes[m], this.program);
             }
         }
     };
+
+    function calculateVertex(mesh, x, y, xWidth, yWidth) {
+        var pixel = new R3.V(x, y, 0);
+        var normal = new R3.V(0, 0, 1);
+        mesh.addVertex(pixel, normal, x / xWidth, y / yWidth);
+    }
 
     function addTris(mesh, index, stride) {
         mesh.addTri(index,    index + stride, index + 1);
@@ -143,21 +151,28 @@ var WAVES = (function () {
     }
 
     View.prototype.constructGrid = function () {
-        var height = this.cellsY,
-            width = scene.width,
-            xStride = 1,
+        var xStride = 1,
             yStride = 1,
+            lastX = this.cellsX - 1,
+            lastY = this.cellsY - 1,
+            rowsPerChunk = this.cellsY,
+            mesh = null,
             meshes = [];
 
         for (var y = 0; y < this.cellsY; y += yStride) {
             var oldMesh = null,
-                generateTris = y < height;
+                generateTris = y < lastY;
             if (generateTris && (y % rowsPerChunk) === 0) {
                 oldMesh = mesh;
                 mesh = new WGL.Mesh();
                 meshes.push(mesh);
             }
-            for (var x = 0; x <= width; x += xStride) {
+            for (var x = 0; x <= this.cellsX; x += xStride) {
+                calculateVertex(mesh, x, y, lastX, lastY, 1, 0, 0, 0);
+                var generateTri = generateTris && x < lastY;
+                if (generateTri) {
+                    addTris(mesh, mesh.index, 2);
+                }
             }
        }
 
