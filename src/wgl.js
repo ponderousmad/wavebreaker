@@ -264,6 +264,7 @@ var WGL = (function () {
             mesh.drawData = {
                 vertexBuffer: this.setupFloatBuffer(mesh.vertices),
                 uvBuffer: this.setupFloatBuffer(mesh.uvs),
+                colorBuffer: this.setupFloatBuffer(mesh.colors),
                 triBuffer: this.setupElementBuffer(mesh.tris)
             };
             if (mesh.image) {
@@ -277,8 +278,14 @@ var WGL = (function () {
         var draw = this.setupMesh(mesh);
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.vertexBuffer);
         this.gl.vertexAttribPointer(program.vertexPosition, 3, this.gl.FLOAT, false, 0, 0);
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.uvBuffer);
-        this.gl.vertexAttribPointer(program.vertexUV, 2, this.gl.FLOAT, false, 0, 0);
+        if (program.vertexUV !== null) {
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.uvBuffer);
+            this.gl.vertexAttribPointer(program.vertexUV, 2, this.gl.FLOAT, false, 0, 0);
+        }
+        if (program.vertexColor !== null) {
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.colorBuffer);
+            this.gl.vertexAttribPointer(program.vertexColor, 4, this.gl.FLOAT, false, 0, 0);
+        }
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, draw.triBuffer);
         if (draw.texture) {
             this.bindTexture(program.shader, program.textureVariable, draw.texture);
@@ -349,7 +356,8 @@ var WGL = (function () {
             this.testSetup = {
                 shader: program,
                 vertexPosition: this.bindVertexAttribute(program, "aPos"),
-                vertexColor: this.bindVertexAttribute(program, "aColor")
+                vertexUV: this.bindVertexAttribute(program, "aUV"),
+                vertexColor: null
             };
 
             this.setupDrawTest(this.testSetup);
@@ -366,14 +374,19 @@ var WGL = (function () {
         this.vertices = [];
         this.normals = [];
         this.uvs = [];
+        this.colors = [];
         this.tris = [];
         this.index = 0;
         this.bbox = new R3.AABox();
     }
 
-    Mesh.prototype.addVertex = function (p, n, u, v) {
+    Mesh.prototype.addVertex = function (p, n, u, v, r, g, b, a) {
         p.pushOn(this.vertices);
         n.pushOn(this.normals);
+        this.colors.push(r || 0);
+        this.colors.push(g || 0);
+        this.colors.push(b || 0);
+        this.colors.push(a || 0);
         this.uvs.push(u);
         this.uvs.push(v);
         this.index += 1;
