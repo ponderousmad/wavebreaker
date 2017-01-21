@@ -3,25 +3,25 @@ var WAVES = (function () {
 
     var H = 0,
         V = 1,
-        CELL_SIZE = V,
-        FORCE_SCALE = 1,
-        DECAY_TIME = 5000;
+        CELL_SIZE = 2,
+        FORCE_SCALE = 0.001,
+        DECAY_TIME = 100;
 
     function View() {
         this.clearColor = [0, 0, 0, 1];
         this.maximize = true;
-        this.updateInDraw = true;
-        this.updateInterval = null;
+        this.updateInDraw = false;
+        this.updateInterval = 15;
         this.consumeKeys = true;
         this.canvasInputOnly = true;
         this.meshes = null;
         this.program = null;
         this.yAxisAngle = 0;
-        this.xAxisAngle = 0;
+        this.xAxisAngle = -Math.PI/3;
         this.room = null;
-        this.distance = 100;
-        this.center = new R3.V(0, 0, 100);
-        this.eyeHeight = 0.25;
+        this.distance = 1;
+        this.center = new R3.V(0, 0, 0);
+        this.eyeHeight = -.3;
 
         var self = this;
 
@@ -32,17 +32,27 @@ var WAVES = (function () {
         this.cells = new Float32Array(this.cellCount * CELL_SIZE);
     }
 
+    function updateMeshVertex(mesh, index, z, b) {
+        mesh.vertices[index * 3 + 2] = z;
+        mesh.colors[index * 4 + 0] = 1 - b;
+        mesh.colors[index * 4 + 2] = b;
+        mesh.updated = true;
+    };
+
     View.prototype.propagate = function (elapsed) {
-        var i = 0,
+        var index = 0,
             lastX = this.cellsX - 1,
             lastY = this.cellsY - 1,
+            neighbours = 8,
             decay = (DECAY_TIME - elapsed) / DECAY_TIME;
 
         for (var y = 0; y < this.cellsY; ++y) {
             var yLow = y > 0 ? -1 : 0,
                 yHi = y < lastY ? 1 : 0;
             for(var x = 0; x < this.cellsX; ++x) {
-                var hSum = -this.cells[i + H],
+                var i = index * CELL_SIZE,
+                    prevH = this.cells[i + H],
+                    hSum = -prevH,
                     count = 0,
                     xHi = x < lastX ? 1 : 0,
                     xLow = x > 0 ? -1 : 0;
@@ -51,16 +61,26 @@ var WAVES = (function () {
                     var yOffset = dy * this.cellsX;
                     for (var dx = xLow; dx <= xHi; ++dx) {
                         ++count;
-                        hSum += this.cells[i + ((dx + yOffset) * CELL_SIZE) + H];
+                        var offset = ((dx + yOffset) * CELL_SIZE);
+                        if (offset + i >= this.cells.length) {
+                            console.log("out of bounds!");
+                        }
+                        hSum += this.cells[i + offset + H];
                     }
                 }
 
-                var hDiff = (hSum / count) - this.cells[i + H],
+                var hDiff = (hSum / neighbours) - this.cells[i + H],
                     prevV = this.cells[i + V],
-                    newV = prevV * decay + hDiff * FORCE_SCALE * elapsed;
+                    newV = prevV * decay + hDiff * FORCE_SCALE * elapsed,
+                    newH = this.cells[i + H] + newV * elapsed;
+                newH = Math.max(-1, Math.min(1, newH));
+                this.cells[i + H] = newH;
                 this.cells[i + V] = newV;
-                this.cells[i + H] += newV * elapsed;
-                i += CELL_SIZE;
+
+                if (this.meshes) {
+                    updateMeshVertex(this.meshes[0], index, 500 * newH, (100000 * newV + 1) / 2);
+                }
+                ++index;
             }
         }
     };
@@ -68,11 +88,16 @@ var WAVES = (function () {
     View.prototype.setRoom = function (room) {
         this.room = room;
         this.meshes = this.constructGrid();
+        this.propagate(0);
     };
 
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
-        if (keyboard.wasAsciiPressed("F")) {
+        if (keyboard.wasAsciiPressed("S")) {
+            var middle = (this.cellsX / 2 ) + (this.cellsX * this.cellsY / 2);
+            this.cells[middle * CELL_SIZE] = 0.05
         }
+        this.propagate(20);
+        console.log("Propagated: ", elapsed);
 
         if (pointer.wheelY) {
         }
@@ -86,7 +111,6 @@ var WAVES = (function () {
         if (keyboard.isShiftDown()) {
         } else if(keyboard.isAltDown()) {
         }
-        this.propagate(this.even);
     };
 
     View.prototype.render = function (room, width, height) {
@@ -128,15 +152,10 @@ var WAVES = (function () {
             room.viewer.submitVR();
         }
         if (room.viewer.showOnPrimary()) {
-            /*
             room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
-            var offset = R3.makeRotateQ(room.viewer.orientation).transformP(this.center);
-            room.viewer.position = R3.addVectors(offset, new R3.V(0, 0, -this.distance));
+            room.viewer.position = new R3.V(0, this.eyeHeight, this.distance);
             room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
             this.drawMeshes(room);
-            */
-            room.setupView(this.program.shader, "canvas", "uMVMatrix", "uPMatrix");
-            room.drawTestSquare(this.program);
         }
     };
 
@@ -148,10 +167,14 @@ var WAVES = (function () {
         }
     };
 
-    function calculateVertex(mesh, x, y, xWidth, yWidth) {
-        var v = new R3.V(x - xWidth / 2, y - yWidth / 2, 100);
+    function calculateVertex(mesh, x, y, halfWidth, halfHeight) {
+        var v = new R3.V(
+            (x - halfWidth) / halfWidth,
+            (y - halfHeight) / halfHeight,
+            0
+        );
         var normal = new R3.V(0, 0, 1);
-        mesh.addVertex(v, normal, x / xWidth, y / yWidth, 1, 0, 0, 1);
+        mesh.addVertex(v, normal, x / (2*halfWidth), y / (2*halfHeight), 1, 0, 0, 1);
     }
 
     function addTris(mesh, index, stride) {
@@ -164,6 +187,8 @@ var WAVES = (function () {
             yStride = 1,
             lastX = this.cellsX - 1,
             lastY = this.cellsY - 1,
+            halfWidth = lastX * 0.5,
+            halfHeight = lastY * 0.5,
             rowsPerChunk = this.cellsY,
             mesh = null,
             meshes = [];
@@ -176,12 +201,12 @@ var WAVES = (function () {
                 mesh = new WGL.Mesh();
                 meshes.push(mesh);
             }
-            for (var x = 0; x <= this.cellsX; x += xStride) {
-                var generateTri = generateTris && x < lastY;
+            for (var x = 0; x < this.cellsX; x += xStride) {
+                var generateTri = generateTris && x < lastX;
                 if (generateTri) {
                     addTris(mesh, mesh.index, this.cellsX);
                 }
-                calculateVertex(mesh, x, y, lastX, lastY);
+                calculateVertex(mesh, x, y, halfWidth, halfHeight);
             }
        }
 
