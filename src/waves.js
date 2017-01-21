@@ -1,9 +1,10 @@
 var WAVES = (function () {
     "use strict";
 
-    var H = 0,
-        V = 1,
-        CELL_SIZE = 2,
+    var H_EVEN = 0,
+        H_ODD = 1,
+        V = 2,
+        CELL_SIZE = 3,
         FORCE_SCALE = 0.004,
         DECAY_TIME = 24.95;
 
@@ -30,6 +31,8 @@ var WAVES = (function () {
         this.cellCount = this.cellsX * this.cellsY;
 
         this.cells = new Float32Array(this.cellCount * CELL_SIZE);
+        this.hA = H_EVEN;
+        this.hB = H_ODD;
     }
 
     function updateMeshVertex(mesh, index, z, b) {
@@ -41,17 +44,18 @@ var WAVES = (function () {
 
     View.prototype.propagate = function (elapsed) {
         var index = 0,
+            hIn = this.hA,
+            hOut = this.hB,
             lastX = this.cellsX - 1,
             lastY = this.cellsY - 1,
             neighbours = 8,
             decay = (DECAY_TIME - elapsed) / DECAY_TIME;
-
         for (var y = 0; y < this.cellsY; ++y) {
             var yLow = y > 0 ? -1 : 0,
                 yHi = y < lastY ? 1 : 0;
             for(var x = 0; x < this.cellsX; ++x) {
                 var i = index * CELL_SIZE,
-                    prevH = this.cells[i + H],
+                    prevH = this.cells[i + hIn],
                     hSum = -prevH,
                     count = 0,
                     xHi = x < lastX ? 1 : 0,
@@ -62,19 +66,16 @@ var WAVES = (function () {
                     for (var dx = xLow; dx <= xHi; ++dx) {
                         ++count;
                         var offset = ((dx + yOffset) * CELL_SIZE);
-                        if (offset + i >= this.cells.length) {
-                            console.log("out of bounds!");
-                        }
-                        hSum += this.cells[i + offset + H];
+                        hSum += this.cells[i + offset + hIn];
                     }
                 }
 
-                var hDiff = (hSum / neighbours) - this.cells[i + H],
+                var hDiff = (hSum / neighbours) - this.cells[i + hIn],
                     prevV = this.cells[i + V],
                     newV = prevV * decay + hDiff * FORCE_SCALE * elapsed,
-                    newH = this.cells[i + H] + newV * elapsed;
+                    newH = this.cells[i + hIn] + newV * elapsed;
                 newH = Math.max(-1, Math.min(1, newH));
-                this.cells[i + H] = newH;
+                this.cells[i + hOut] = newH;
                 this.cells[i + V] = newV;
 
                 if (this.meshes) {
@@ -83,6 +84,8 @@ var WAVES = (function () {
                 ++index;
             }
         }
+        this.hA = hOut;
+        this.hB = hIn;
     };
 
     View.prototype.setRoom = function (room) {
@@ -94,7 +97,7 @@ var WAVES = (function () {
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
         if (keyboard.isAsciiDown("S")) {
             var middle = (this.cellsX / 2 ) + (this.cellsX * this.cellsY / 2);
-            this.cells[middle * CELL_SIZE] = 0.01;
+            this.cells[middle * CELL_SIZE + this.hA] = 0.01;
         }
         this.propagate(20);
         console.log("Propagated: ", elapsed);
