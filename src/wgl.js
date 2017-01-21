@@ -349,8 +349,7 @@ var WGL = (function () {
             this.testSetup = {
                 shader: program,
                 vertexPosition: this.bindVertexAttribute(program, "aPos"),
-                vertexUV: this.bindVertexAttribute(program, "aUV"),
-                textureVariable: "uSampler"
+                vertexColor: this.bindVertexAttribute(program, "aColor")
             };
 
             this.setupDrawTest(this.testSetup);
