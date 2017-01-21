@@ -4,8 +4,8 @@ var WAVES = (function () {
     var H = 0,
         V = 1,
         CELL_SIZE = 2,
-        FORCE_SCALE = 0.001,
-        DECAY_TIME = 100;
+        FORCE_SCALE = 0.004,
+        DECAY_TIME = 24.95;
 
     function View() {
         this.clearColor = [0, 0, 0, 1];
@@ -17,9 +17,9 @@ var WAVES = (function () {
         this.meshes = null;
         this.program = null;
         this.yAxisAngle = 0;
-        this.xAxisAngle = -Math.PI/3;
+        this.xAxisAngle = -Math.PI/4;
         this.room = null;
-        this.distance = 1;
+        this.distance = 1.5;
         this.center = new R3.V(0, 0, 0);
         this.eyeHeight = -.3;
 
@@ -92,9 +92,9 @@ var WAVES = (function () {
     };
 
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
-        if (keyboard.wasAsciiPressed("S")) {
+        if (keyboard.isAsciiDown("S")) {
             var middle = (this.cellsX / 2 ) + (this.cellsX * this.cellsY / 2);
-            this.cells[middle * CELL_SIZE] = 0.05
+            this.cells[middle * CELL_SIZE] = 0.01;
         }
         this.propagate(20);
         console.log("Propagated: ", elapsed);
@@ -125,8 +125,10 @@ var WAVES = (function () {
                 textureVariable: "uSampler"
             };
             room.viewer.position.set(0, 0, 2);
-            room.setupDrawTest(this.program);
             room.gl.enable(room.gl.CULL_FACE);
+            this.program.batch = new BLIT.Batch("images/");
+            this.meshTexture = this.program.batch.load("wavy.png");
+            this.program.batch.commit();
         }
         if (!this.program.batch.loaded) {
             return;
@@ -199,6 +201,7 @@ var WAVES = (function () {
             if (generateTris && (y % rowsPerChunk) === 0) {
                 oldMesh = mesh;
                 mesh = new WGL.Mesh();
+                mesh.image = this.meshTexture;
                 meshes.push(mesh);
             }
             for (var x = 0; x < this.cellsX; x += xStride) {
