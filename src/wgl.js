@@ -223,6 +223,13 @@ var WGL = (function () {
         return buffer;
     };
 
+    Room.prototype.updateBuffer = function (buffer, data, elements) {
+        var hint = this.gl.DYNAMIC_DRAW;
+        var arrayType = elements ? this.gl.ELEMENT_ARRAY_BUFFER : this.gl.ARRAY_BUFFER;
+        this.gl.bindBuffer(arrayType, buffer);
+        this.gl.bufferData(arrayType, new Float32Array(data), hint);
+    }
+
     Room.prototype.setupFloatBuffer = function (data, elements, hint) {
         return this.setupBuffer(new Float32Array(data), elements, hint);
     };
@@ -252,7 +259,7 @@ var WGL = (function () {
         return texture;
     };
 
-    Room.prototype.setupMesh = function (mesh) {
+    Room.prototype.setupMesh = function (mesh, dynamic) {
         if (!mesh.drawData) {
             if (mesh.index >= Math.pow(2, 16)) {
                 throw "Mesh has too many verticies to index!";
@@ -262,11 +269,12 @@ var WGL = (function () {
                     throw "Past end of verticies:" + mesh.tris[i] + ", " + mesh.index;
                 }
             }
+            var drawHint = dynamic ? this.gl.DYNAMIC_DRAW : this.gl.STATIC_DRAW;
 
             mesh.drawData = {
-                vertexBuffer: this.setupFloatBuffer(mesh.vertices),
+                vertexBuffer: this.setupFloatBuffer(mesh.vertices, false, drawHint),
                 uvBuffer: this.setupFloatBuffer(mesh.uvs),
-                colorBuffer: this.setupFloatBuffer(mesh.colors),
+                colorBuffer: this.setupFloatBuffer(mesh.colors, false, drawHint),
                 triBuffer: this.setupElementBuffer(mesh.tris)
             };
             if (mesh.image) {
@@ -279,6 +287,9 @@ var WGL = (function () {
     Room.prototype.drawMesh = function (mesh, program) {
         var draw = this.setupMesh(mesh);
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.vertexBuffer);
+        if (mesh.updated) {
+            this.updateBuffer(draw.vertexBuffer, mesh.vertices);
+        }
         this.gl.vertexAttribPointer(program.vertexPosition, 3, this.gl.FLOAT, false, 0, 0);
         if (program.vertexUV !== null) {
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.uvBuffer);
@@ -286,6 +297,9 @@ var WGL = (function () {
         }
         if (program.vertexColor !== null) {
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.colorBuffer);
+            if (mesh.updated) {
+                this.updateBuffer(draw.colorBuffer, mesh.colors);
+            }
             this.gl.vertexAttribPointer(program.vertexColor, 4, this.gl.FLOAT, false, 0, 0);
         }
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, draw.triBuffer);
@@ -293,6 +307,7 @@ var WGL = (function () {
             this.bindTexture(program.shader, program.textureVariable, draw.texture);
         }
         this.gl.drawElements(this.gl.TRIANGLES, mesh.tris.length, this.gl.UNSIGNED_SHORT, 0);
+        mesh.updated = false;
     };
 
     Room.prototype.setupView = function (program, viewportRegion, viewVariable, perspectiveVariable, transform, eye) {
@@ -394,6 +409,7 @@ var WGL = (function () {
         this.tris = [];
         this.index = 0;
         this.bbox = new R3.AABox();
+        this.updated = false;
     }
 
     Mesh.prototype.addVertex = function (p, n, u, v, r, g, b, a) {
@@ -411,8 +427,8 @@ var WGL = (function () {
 
     Mesh.prototype.addTri = function (a, b, c) {
         this.tris.push(a);
-        this.tris.push(b);
         this.tris.push(c);
+        this.tris.push(b);
     };
 
     Mesh.prototype.appendVerticies = function (other) {
