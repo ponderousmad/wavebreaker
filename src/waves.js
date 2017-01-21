@@ -63,7 +63,7 @@ var WAVES = (function () {
                 i += CELL_SIZE;
             }
         }
-    }
+    };
 
     View.prototype.setRoom = function (room) {
         this.room = room;
