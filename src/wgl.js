@@ -307,6 +307,11 @@ var WGL = (function () {
 
     Room.prototype.drawMesh = function (mesh, program) {
         var draw = this.setupMesh(mesh);
+
+        if (mesh.transform) {
+            this.pushTransform(program, mesh.transform);
+        }
+
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.vertexBuffer);
         if (mesh.updated) {
             this.updateBuffer(draw.vertexBuffer, mesh.vertices);
@@ -335,13 +340,14 @@ var WGL = (function () {
         mesh.updated = false;
     };
 
-    Room.prototype.setupView = function (program, viewportRegion, viewVariable, perspectiveVariable, normalVariable, transform, eye) {
-        var aspect = this.viewer.viewport(this.gl, this.canvas, viewportRegion),
+    Room.prototype.setupView = function (program, viewportRegion, transform, eye) {
+        var shader = program.shader,
+            aspect = this.viewer.viewport(this.gl, this.canvas, viewportRegion),
             perspective = eye ? this.viewer.perspectiveFOV(eye) : this.viewer.perspective(aspect),
             view = this.viewer.view(eye),
-            pLocation = this.gl.getUniformLocation(program, perspectiveVariable),
-            vLocation = this.gl.getUniformLocation(program, viewVariable),
-            nLocation = normalVariable ? this.gl.getUniformLocation(program, normalVariable) : null;
+            pLocation = this.gl.getUniformLocation(shader, program.perspectiveUniform),
+            vLocation = this.gl.getUniformLocation(shader, program.mvUniform),
+            nLocation = program.normalUniform ? this.gl.getUniformLocation(shader, program.normalUniform) : null;
         if (transform) {
             view = R3.matmul(view, transform);
         }
@@ -352,6 +358,19 @@ var WGL = (function () {
             normal.transpose();
             this.gl.uniformMatrix4fv(nLocation, false, normal.m);
         }
+        program.view = view;
+    };
+
+    Room.prototype.pushTransform = function (program, transform) {
+        var shader = program.shader,
+            modelView = new R3.M(),
+            vLocation = this.gl.getUniformLocation(shader, program.mvUniform),
+            nLocation = this.gl.getUniformLocation(shader, program.normalUniform);
+        R3.matmul(program.view, transform, modelView);
+        this.gl.uniformMatrix4fv(vLocation, false, modelView.m);
+        var normal = modelView.inverse();
+        normal.transpose();
+        this.gl.uniformMatrix4fv(nLocation, false, normal.m);
     };
 
     Room.prototype.bindTexture = function (program, variable, texture) {
@@ -444,6 +463,7 @@ var WGL = (function () {
         this.tris = [];
         this.index = 0;
         this.bbox = new R3.AABox();
+        this.transform = R3.identity();
         this.updated = false;
     }
 
@@ -481,8 +501,12 @@ var WGL = (function () {
     };
 
     Mesh.prototype.finalize = function (min, max) {
-        this.bbox.envelope(min);
-        this.bbox.envelope(max);
+        if (min) {
+            this.bbox.envelope(min);
+        }
+        if (max) {
+            this.bbox.envelope(max);
+        }
         this.index = this.vertices.length / 3;
         if (this.index != this.normals.length / 3) {
             throw "Normals missing!";

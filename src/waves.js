@@ -9,8 +9,7 @@ var WAVES = (function () {
         DECAY_TIME = 200;
 
     function Boat() {
-        var boatScale = R3.makeScale(0.05),
-            bow = new R3.V(0.0, 1.0, 0.5),
+        var bow = new R3.V(0.0, 1.0, 0.5),
             base = new R3.V(0.0, -1.0, -0.05),
             left = new R3.V(-0.5, -1.0, 0.20),
             right = new R3.V( 0.5, -1.0, 0.20),
@@ -30,7 +29,7 @@ var WAVES = (function () {
             mesh = new WGL.Mesh();
 
         for (var p = 0; p < points.length; ++p) {
-            var point = boatScale.transformP(points[p]);
+            var point = points[p];
             point.pushOn(mesh.vertices);
             mesh.bbox.envelope(point);
         }
@@ -55,7 +54,8 @@ var WAVES = (function () {
             1.0, 0.0
         ];
         mesh.tris = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-        mesh.finalize(new R3.V(-0.5, -1, -0.05), new R3.V(0.5, 1, 0.2));
+        mesh.finalize();
+        mesh.transform = R3.makeScale(0.1);
         this.mesh = mesh;
     }
 
@@ -196,6 +196,24 @@ var WAVES = (function () {
         this.surface = this.constructSurface();
         this.meshes = [this.surface, this.boat.mesh];
     }
+
+    View.prototype.toCellX = function (worldX) {
+        return Math.round((worldX + 1) * 0.5 * this.cellsX);
+    };
+
+    View.prototype.toCellY = function (worldX) {
+        return Math.round((worldY + 1) * 0.5 * this.cellsY);
+    };
+
+    View.prototype.toWorldX = function (cellX) {
+        var half = this.cellsX * 0.5;
+        return (cellX - half) / half;
+    };
+
+    View.prototype.toWorldY = function (cellY) {
+        var half = this.cellsY * 0.5;
+        return (cellY - half) / half;
+    };
 
     function updateMeshVertex(mesh, index, z, b) {
         mesh.vertices[index * 3 + 2] = z;
@@ -338,6 +356,9 @@ var WAVES = (function () {
             var shader = room.programFromElements("vertex-test", "fragment-test");
             this.program = {
                 shader: shader,
+                mvUniform: "uMVMatrix",
+                perspectiveUniform: "uPMatrix",
+                normalUniform: "uNormalMatrix",
                 vertexPosition: room.bindVertexAttribute(shader, "aPos"),
                 vertexNormal: room.bindVertexAttribute(shader, "aNormal"),
                 vertexUV: room.bindVertexAttribute(shader, "aUV"),
@@ -365,7 +386,7 @@ var WAVES = (function () {
                 views = [vrFrame.leftViewMatrix, vrFrame.rightViewMatrix];
             for (var e = 0; e < eyes.length; ++e) {
                 var viewMatrix = R3.matmul(new R3.M(views[e]), m);
-                room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", "uNormalMatrix", viewMatrix, vrFrame);
+                room.setupView(this.program, eyes[e], viewMatrix, vrFrame);
                 this.drawMeshes(room);
             }
             room.viewer.submitVR();
@@ -373,7 +394,7 @@ var WAVES = (function () {
         room.viewer.orientation = this.viewOrientation();
         room.viewer.position = this.viewPosition();
         if (room.viewer.showOnPrimary()) {
-            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix", "uNormalMatrix");
+            room.setupView(this.program, "safe");
             this.drawMeshes(room);
         }
     };
@@ -394,14 +415,12 @@ var WAVES = (function () {
         }
     };
 
-    function calculateVertex(mesh, x, y, halfWidth, halfHeight) {
-        var v = new R3.V(
-            (x - halfWidth) / halfWidth,
-            (y - halfHeight) / halfHeight,
-            0
-        );
-        var normal = new R3.V(0, 0, 1);
-        mesh.addVertex(v, normal, x / (2*halfWidth), y / (2*halfHeight), 1, 0, 0, 1);
+    View.prototype.calculateVertex = function (mesh, x, y) {
+        var vertex = new R3.V(this.toWorldX(x), this.toWorldY(y), 0),
+            u = x / (this.cellsX - 1),
+            v = y / (this.cellsY - 1),
+            normal = new R3.V(0, 0, 1);
+        mesh.addVertex(vertex, normal, u, v, 1, 0, 0, 1);
     }
 
     function addTris(mesh, index, stride) {
@@ -410,21 +429,17 @@ var WAVES = (function () {
     }
 
     View.prototype.constructSurface = function () {
-        var lastX = this.cellsX - 1,
-            lastY = this.cellsY - 1,
-            halfWidth = lastX * 0.5,
-            halfHeight = lastY * 0.5,
-            mesh = new WGL.Mesh();
+        var mesh = new WGL.Mesh();
         mesh.image = this.surfaceTexture;
 
         for (var y = 0; y < this.cellsY; ++y) {
-            var generateTris = y < lastY;
+            var generateTris = y < (this.cellsY - 1);
             for (var x = 0; x < this.cellsX; ++x) {
-                var generateTri = generateTris && x < lastX;
+                var generateTri = generateTris && x < (this.cellsX - 1);
                 if (generateTri) {
                     addTris(mesh, mesh.index, this.cellsX);
                 }
-                calculateVertex(mesh, x, y, halfWidth, halfHeight);
+                this.calculateVertex(mesh, x, y);
             }
         }
         return mesh;
