@@ -38,6 +38,8 @@ var WAVES = (function () {
 
         this.forceX = this.cellsX / 2;
         this.forceY = this.cellsY / 2;
+
+        this.dampenBoundary = false;
     }
 
     function updateMeshVertex(mesh, index, z, b) {
@@ -53,7 +55,6 @@ var WAVES = (function () {
             hOut = this.hB,
             lastX = this.cellsX - 1,
             lastY = this.cellsY - 1,
-            neighbours = 8,
             decay = Math.max(0, (DECAY_TIME - elapsed) / DECAY_TIME);
         for (var y = 0; y < this.cellsY; ++y) {
             var yLow = y > 0 ? -1 : 0,
@@ -62,7 +63,7 @@ var WAVES = (function () {
                 var i = index * CELL_SIZE,
                     prevH = this.cells[i + hIn],
                     hSum = -prevH,
-                    count = 0,
+                    count = -1,
                     xHi = x < lastX ? 1 : 0,
                     xLow = x > 0 ? -1 : 0;
 
@@ -74,8 +75,11 @@ var WAVES = (function () {
                         hSum += this.cells[i + offset + hIn];
                     }
                 }
+                if (this.dampenBoundary) {
+                    count = 8;
+                }
 
-                var hDiff = (hSum / neighbours) - prevH,
+                var hDiff = (hSum / count) - prevH,
                     prevV = this.cells[i + V],
                     deltaV = hDiff * FORCE_SCALE * elapsed,
                     newV = prevV * decay + deltaV,
