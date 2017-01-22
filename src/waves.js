@@ -9,38 +9,38 @@ var WAVES = (function () {
         DECAY_TIME = 200;
 
     function Boat() {
-        var bow = new R3.V(0.0, 1.0, 0.0),
-            base = new R3.V(0.0, 0.0, -0.25),
-            left = new R3.V(-0.5, -1.0, 0.0),
-            right = new R3.V( 0.5, -1.0, 0.0),
-            keel = R3.subVectors(bow, keel),
+        var boatScale = R3.makeScale(0.02),
+            bow = new R3.V(0.0, 1.0, 0.5),
+            base = new R3.V(0.0, 0.0, -0.05),
+            left = new R3.V(-0.5, -1.0, 0.02),
+            right = new R3.V( 0.5, -1.0, 0.02),
+            keel = R3.subVectors(bow, base),
             points = [
                 bow, left, right,
                 bow, left, base,
                 bow, base, right,
-                base, right, left
+                base, left, right
             ],
             faceNormals = [
                 new R3.V(0, 0, 1),
                 new R3.V(0, -1, 0),
                 keel.cross(R3.subVectors(left, base)),
                 keel.cross(R3.subVectors(left, keel))
-            ];
-        this.vertices = [];
-        this.normals = [];
-        this.tris = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+            ],
+            mesh = new WGL.Mesh();
 
-        for (var p = 0; p < this.points.length; ++p) {
-            points[p].pushOn(this.points[p]);
+        for (var p = 0; p < points.length; ++p) {
+            var point = boatScale.transformP(points[p]);
+            point.pushOn(mesh.vertices);
+            mesh.bbox.envelope(point);
         }
-        for (var n = 0; n < this.faceNormals.length; ++n) {
-            var normal = this.faceNormals[n];
-            normal.pushOn(this.normals);
-            normal.pushOn(this.normals);
-            normal.pushOn(this.normals);
+        for (var n = 0; n < faceNormals.length; ++n) {
+            var normal = faceNormals[n];
+            normal.pushOn(mesh.normals);
+            normal.pushOn(mesh.normals);
+            normal.pushOn(mesh.normals);
         }
-
-        this.uvs = [
+        mesh.uvs = [
             0.5, 1.0,
             0.0, 0.0,
             1.0, 0.0,
@@ -54,6 +54,9 @@ var WAVES = (function () {
             0.0, 0.0,
             1.0, 0.0
         ];
+        mesh.tris = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        mesh.finalize(new R3.V(-0.5, -1, -0.05), new R3.V(0.5, 1, 0.2));
+        this.mesh = mesh;
     }
 
     function RegionPoint(x, y) {
@@ -149,6 +152,10 @@ var WAVES = (function () {
     };
 
     function View() {
+        this.batch = new BLIT.Batch("images/");
+        this.surfaceTexture = this.batch.load("wavy.png");
+        this.batch.commit();
+
         this.clearColor = [0, 0, 0, 1];
         this.maximize = true;
         this.updateInDraw = false;
@@ -173,6 +180,7 @@ var WAVES = (function () {
         this.cells = new Float32Array(this.cellCount * CELL_SIZE);
         this.hA = H_EVEN;
         this.hB = H_ODD;
+        this.surface = null;
 
         this.time = 0;
 
@@ -182,6 +190,11 @@ var WAVES = (function () {
         this.ocean = new Thumper(new RegionLineY(0, 0, this.cellsX), false, Math.PI/100, 0.0001);
 
         this.thumpers = [this.clickThumper, this.ocean];
+
+        this.boat = new Boat();
+
+        this.surface = this.constructSurface();
+        this.meshes = [this.surface, this.boat.mesh];
     }
 
     function updateMeshVertex(mesh, index, z, b) {
@@ -248,8 +261,8 @@ var WAVES = (function () {
                 this.cells[i + hOut] = newH;
                 this.cells[i + V] = newV;
 
-                if (this.meshes) {
-                    updateMeshVertex(this.meshes[0], index, 500 * newH, (100000 * newV + 1) / 2);
+                if (this.surface) {
+                    updateMeshVertex(this.surface, index, 500 * newH, (100000 * newV + 1) / 2);
                 }
                 ++index;
             }
@@ -260,8 +273,6 @@ var WAVES = (function () {
 
     View.prototype.setRoom = function (room) {
         this.room = room;
-        this.meshes = this.constructGrid();
-        this.propagate(0);
     };
 
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
@@ -335,11 +346,8 @@ var WAVES = (function () {
             };
             room.viewer.position.set(0, 0, 2);
             room.gl.enable(room.gl.CULL_FACE);
-            this.program.batch = new BLIT.Batch("images/");
-            this.meshTexture = this.program.batch.load("wavy.png");
-            this.program.batch.commit();
         }
-        if (!this.program.batch.loaded) {
+        if (!this.batch.loaded) {
             return;
         }
         if (room.viewer.inVR()) {
@@ -401,36 +409,25 @@ var WAVES = (function () {
         mesh.addTri(index + 1,index + stride, index + stride + 1);
     }
 
-    View.prototype.constructGrid = function () {
-        var xStride = 1,
-            yStride = 1,
-            lastX = this.cellsX - 1,
+    View.prototype.constructSurface = function () {
+        var lastX = this.cellsX - 1,
             lastY = this.cellsY - 1,
             halfWidth = lastX * 0.5,
             halfHeight = lastY * 0.5,
-            rowsPerChunk = this.cellsY,
-            mesh = null,
-            meshes = [];
+            mesh = new WGL.Mesh();
+        mesh.image = this.surfaceTexture;
 
-        for (var y = 0; y < this.cellsY; y += yStride) {
-            var oldMesh = null,
-                generateTris = y < lastY;
-            if (generateTris && (y % rowsPerChunk) === 0) {
-                oldMesh = mesh;
-                mesh = new WGL.Mesh();
-                mesh.image = this.meshTexture;
-                meshes.push(mesh);
-            }
-            for (var x = 0; x < this.cellsX; x += xStride) {
+        for (var y = 0; y < this.cellsY; ++y) {
+            var generateTris = y < lastY;
+            for (var x = 0; x < this.cellsX; ++x) {
                 var generateTri = generateTris && x < lastX;
                 if (generateTri) {
                     addTris(mesh, mesh.index, this.cellsX);
                 }
                 calculateVertex(mesh, x, y, halfWidth, halfHeight);
             }
-       }
-
-        return meshes;
+        }
+        return mesh;
     };
 
     window.onload = function(e) {
