@@ -60,6 +60,7 @@ var WAVES = (function () {
         mesh.transform = R3.makeScale(this.scale);
         this.mesh = mesh;
         this.position = new R3.V(0, 0, 0);
+        this.angle = 0;
         var physicsScale = 0.5;
         this.bow = bow.scaled(physicsScale);
         this.left = left.scaled(physicsScale);
@@ -71,7 +72,8 @@ var WAVES = (function () {
             up = new R3.V(0, 0, 1),
             bow = m.transformP(this.bow),
             left = m.transformP(this.left),
-            right = m.transformP(this.right)
+            right = m.transformP(this.right),
+            spin = false;
         bow.z = view.getHeight(bow.x, bow.y);
         left.z = view.getHeight(left.x, left.y);
         right.z = view.getHeight(right.x, right.y);
@@ -83,7 +85,7 @@ var WAVES = (function () {
         rightDir.normalize();
         leftDir.normalize();
 
-        var normal = rightDir.cross(leftDir);
+        var normal = leftDir.cross(rightDir);
         normal.normalize();
         var angle = Math.acos(normal.dot(up)),
             pull = R3.vectorOntoPlane(new R3.V(0, 0, -1), normal);
@@ -98,7 +100,27 @@ var WAVES = (function () {
         if (angle > (Math.PI * 0.01)) {
             var rotation = R3.makeRotateQ(R3.angleAxisQ(angle, normal.cross(up)));
             R3.matmul(m, rotation, m);
+            spin = true;
         }
+
+        if (spin) {
+            var toSide = R3.subVectors(right, left);
+            toSide.z = 0;
+            toSide.normalize();
+            pull.normalize();
+            var dot = toSide.dot(pull);
+            if (dot < 0) {
+                toSide.scale(-1);
+            }
+            var pullAngle = Math.acos(toSide.dot(pull)),
+                torque = toSide.cross(pull);
+            if (torque.z > 0) {
+                pullAngle = -pullAngle;
+            }
+            this.angle = R2.clampAngle(this.angle - pullAngle * 0.05);
+        }
+        var twist = R3.makeRotateZ(this.angle);
+        R3.matmul(m, twist, m);
         this.mesh.transform = m;
     };
 
