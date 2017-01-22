@@ -40,6 +40,9 @@ var WAVES = (function () {
         this.forceY = this.cellsY / 2;
 
         this.dampenBoundary = false;
+
+        this.thumperRate = 20 / Math.PI;
+        this.thumperAmplitude = 0.0005;
     }
 
     function updateMeshVertex(mesh, index, z, b) {
@@ -88,7 +91,7 @@ var WAVES = (function () {
 
                 if (force && x == this.forceX && y == this.forceY) {
                     newV = 0;
-                    newH = Math.sin(this.time/20 * Math.PI) * 0.0005;
+                    newH = Math.sin(this.time / this.thumperRate) * this.thumperAmplitude;
                 }
 
                 this.cells[i + hOut] = newH;
@@ -114,8 +117,17 @@ var WAVES = (function () {
         var fixedTime = 2,
             force = false;
         this.time += fixedTime;
-        if (keyboard.isAsciiDown("S")) {
-            force = true;
+
+        if (keyboard.wasAsciiPressed("K")) {
+            this.thumperRate *= 2;
+        } else if(keyboard.wasAsciiPressed("J")) {
+            this.thumperRate /= 2;
+        }
+
+        if (keyboard.wasAsciiPressed("M")) {
+            this.thumperAmplitude *= 2;
+        } else if(keyboard.wasAsciiPressed("N")) {
+            this.thumperAmplitude /= 2;
         }
 
         if (pointer.wheelY) {
