@@ -273,14 +273,13 @@ var WAVES = (function () {
         this.xMax = xMax;
     }
 
-    RegionLineX.prototype.includes = function(x, y) {
-        return this.x == x && this.yMin <= y && y <= this.yMax;
+    RegionLineY.prototype.includes = function(x, y) {
+        return this.y == y && this.xMin <= x && x <= this.xMax;
     };
 
-
-    function Thumper(region, flip) {
-        this.frequency = Math.PI / 20;
-        this.amplitude = 0.0002;
+    function Thumper(region, flip, frequency, amplitude) {
+        this.frequency = frequency || Math.PI / 20;
+        this.amplitude = amplitude || 0.0002;
 
         this.time = 0;
         this.active = false;
@@ -288,6 +287,7 @@ var WAVES = (function () {
         this.flip = flip || false;
         this.region = region;
         this.lastValue = 0;
+        this.delta = 0;
     }
 
     Thumper.prototype.scaleFrequency = function (factor) {
@@ -305,6 +305,12 @@ var WAVES = (function () {
 
     Thumper.prototype.update = function (elapsed) {
         this.time += elapsed;
+        if (this.active) {
+            var value = Math.sin(this.time * this.frequency) * this.amplitude,
+                result = value - this.lastValue;
+            this.lastValue = value;
+            this.delta = this.flip ? -result : result;
+        }
     };
 
     Thumper.prototype.start = function () {
@@ -315,13 +321,7 @@ var WAVES = (function () {
         this.active = false;
         this.time = 0;
         this.lastValue = 0;
-    };
-
-    Thumper.prototype.delta = function() {
-        var value = Math.sin(this.time * this.frequency) * this.amplitude,
-            result = value - this.lastValue;
-        this.lastValue = value;
-        return this.flip ? -result : result;
+        this.delta = 0;
     };
 
     function Damper(region, attenuation) {
@@ -364,8 +364,9 @@ var WAVES = (function () {
         this.dampenBoundary = false;
 
         this.clickThumper = new Thumper(new RegionPoint(this.cellsX / 2, this.cellsY / 2), true);
+        this.ocean = new Thumper(new RegionLineY(0, 0, this.cellsX), false, Math.PI/100, 0.0001);
 
-        this.thumpers = [this.clickThumper];
+        this.thumpers = [this.clickThumper, this.ocean];
     }
 
     function updateMeshVertex(mesh, index, z, b) {
@@ -397,9 +398,8 @@ var WAVES = (function () {
                     var thumper = this.thumpers[t];
                     if (thumper.includes(x, y)) {
                         force = true;
-                        var delta = thumper.delta();
-                        newH = prevH + delta;
-                        newV = delta / elapsed;
+                        newH = prevH + thumper.delta;
+                        newV = thumper.delta / elapsed;
                         break;
                     }
                 }
@@ -465,8 +465,10 @@ var WAVES = (function () {
             this.clickThumper.scaleAmplitude(0.5);
         }
 
-        for (var t = 0; t < this.thumpers.length; ++t) {
-            this.thumpers[t].update(fixedTime);
+        if (keyboard.wasAsciiPressed("O")) {
+            this.ocean.start();
+        } else if(keyboard.wasAsciiPressed("P")) {
+            this.ocean.stop();
         }
 
         if (pointer.wheelY) {
@@ -493,6 +495,10 @@ var WAVES = (function () {
 
         if (keyboard.isShiftDown()) {
         } else if(keyboard.isAltDown()) {
+        }
+
+        for (var t = 0; t < this.thumpers.length; ++t) {
+            this.thumpers[t].update(fixedTime);
         }
 
         this.propagate(2);
