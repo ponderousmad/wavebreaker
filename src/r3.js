@@ -127,6 +127,10 @@ var R3 = (function () {
         return new V(this.y * v.z - this.z * v.y, this.z * v.x - this.x * v.z, this.x * v.y - this.y * v.x, 0);
     };
 
+    V.prototype.projectOnV = function (v) {
+        return this.scaled(this.dot(v) / v.lengthSq());
+    };
+
     function pointDistanceSq(a, b) {
         var xDiff = a.x - b.x,
             yDiff = a.y - b.y,
@@ -144,6 +148,10 @@ var R3 = (function () {
 
     function subVectors(a, b) {
         return new V(a.x - b.x, a.y - b.y, a.z - b.z);
+    }
+
+    function vectorOntoPlane(v, normal) {
+        return subVectors(v, v.projectOnV(normal));
     }
 
     function Q(x, y, z, w) {
@@ -1017,6 +1025,7 @@ var R3 = (function () {
         pointDistance: pointDistance,
         addVectors: addVectors,
         subVectors: subVectors,
+        vectorOntoPlane: vectorOntoPlane,
         perspective: perspective,
         perspectiveFOV: perspectiveFOV,
         testSuite: testSuite
