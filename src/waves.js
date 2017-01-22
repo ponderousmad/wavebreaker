@@ -9,6 +9,10 @@ var WAVES = (function () {
         DECAY_TIME = 200,
         VERTICAL_SCALE = 500;
 
+    function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+    }
+
     function Boat() {
         var bow = new R3.V(0.0, 1.0, 0.1),
             base = new R3.V(0.0, -1.0, -0.20),
@@ -57,22 +61,26 @@ var WAVES = (function () {
         mesh.tris = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
         mesh.finalize();
         this.scale = 0.05;
-        mesh.transform = R3.makeScale(this.scale);
         this.mesh = mesh;
-        this.position = new R3.V(0, 0, 0);
+        this.position = new R3.V(0, -0.8, 0);
         this.angle = 0;
         var physicsScale = 0.5;
         this.bow = bow.scaled(physicsScale);
         this.left = left.scaled(physicsScale);
         this.right = right.scaled(physicsScale);
+        this.velocity = 0;
+        this.maxVelocity = 0.02;
+        this.accelTime = 20;
     }
 
-    Boat.prototype.update = function(elapsed, view) {
+    Boat.prototype.update = function(elapsed, view, engines, steer) {
         var m = this.mesh.transform,
             up = new R3.V(0, 0, 1),
             bow = m.transformP(this.bow),
             left = m.transformP(this.left),
             right = m.transformP(this.right),
+            forward = m.transform(new R3.V(0, 1, 0)),
+            steerAngle = steer * 0.02 * (0.5 + this.velocity / this.maxVelocity),
             spin = false;
         bow.z = view.getHeight(bow.x, bow.y);
         left.z = view.getHeight(left.x, left.y);
@@ -91,8 +99,32 @@ var WAVES = (function () {
             pull = R3.vectorOntoPlane(new R3.V(0, 0, -1), normal);
         pull.z = 0;
         this.position.addScaled(pull, 0.015);
-        this.position.x = Math.min(1, Math.max(-1, this.position.x));
-        this.position.y = Math.min(1, Math.max(-1, this.position.y));
+
+        var velocityStep = this.maxVelocity / (this.accelTime / elapsed);
+        if (engines) {
+            this.velocity = Math.min(this.maxVelocity, this.velocity + velocityStep);
+        } else {
+            this.velocity = Math.max(0, this.velocity - velocityStep / 2);
+        }
+        if (this.velocity > 0) {
+            forward.z = 0;
+            forward.normalize();
+            this.position.addScaled(forward, this.velocity);
+        }
+        var cellSizeX = 2.0 / view.cellsX,
+            cellSizeY = 2.0 / view.cellsY,
+            clampedX = clamp(this.position.x, - 1 + cellSizeX, 1 - cellSizeX),
+            clampedY = clamp(this.position.y, - 1 + cellSizeY, 1 - cellSizeY);
+
+        if (this.position.x != clampedX) {
+            this.position.x = clampedX;
+            this.velocity = 0;
+        }
+
+        if (this.position.y != clampedY) {
+            this.position.y = clampedY;
+            this.velocity = 0;
+        }
 
         m.setIdentity();
         m.translate(this.position);
@@ -104,21 +136,24 @@ var WAVES = (function () {
         }
 
         if (spin) {
-            var toSide = R3.subVectors(right, left);
+            var toSide = R3.subVectors(right, left),
+                pullStrength = pull.length();
             toSide.z = 0;
             toSide.normalize();
-            pull.normalize();
+            pull.scale(1 / pullStrength);
+            pullStrength *= 0.5;
             var dot = toSide.dot(pull);
             if (dot < 0) {
                 toSide.scale(-1);
             }
             var pullAngle = Math.acos(toSide.dot(pull)),
                 torque = toSide.cross(pull);
-            if (torque.z > 0) {
+            if (torque.z < 0) {
                 pullAngle = -pullAngle;
             }
-            this.angle = R2.clampAngle(this.angle - pullAngle * 0.05);
+            steerAngle += pullAngle * (pullStrength * pullStrength);
         }
+        this.angle = R2.clampAngle(this.angle + steerAngle);
         var twist = R3.makeRotateZ(this.angle);
         R3.matmul(m, twist, m);
         this.mesh.transform = m;
@@ -263,11 +298,11 @@ var WAVES = (function () {
     }
 
     View.prototype.toCellX = function (worldX) {
-        return Math.min(this.cellsX, Math.max(0, Math.round((worldX + 1) * 0.5 * this.cellsX)));
+        return clamp(Math.round((worldX + 1) * 0.5 * this.cellsX), 0, this.cellsX - 1);
     };
 
     View.prototype.toCellY = function (worldY) {
-        return Math.min(this.cellsY, Math.max(0, Math.round((worldY + 1) * 0.5 * this.cellsY)));
+        return clamp(Math.round((worldY + 1) * 0.5 * this.cellsY), 0, this.cellsY - 1);
     };
 
     View.prototype.toWorldX = function (cellX) {
@@ -294,6 +329,10 @@ var WAVES = (function () {
         mesh.updated = true;
     }
 
+    View.prototype.cellIndex = function(cellX, cellY) {
+        return ((cellY * this.cellsX) + cellX) * CELL_SIZE;
+    };
+
     View.prototype.propagate = function (elapsed) {
         var index = 0,
             hIn = this.hA,
@@ -301,6 +340,13 @@ var WAVES = (function () {
             lastX = this.cellsX - 1,
             lastY = this.cellsY - 1,
             decay = Math.max(0, (DECAY_TIME - elapsed) / DECAY_TIME);
+
+        if (this.boat.velocity > (this.boat.maxVelocity * 0.1)) {
+            var boatX = this.toCellX(this.boat.position.x),
+                boatY = this.toCellY(this.boat.position.y);
+            this.cells[this.cellIndex(boatX, boatY) + hIn] -= this.boat.velocity * 0.0005;
+        }
+
         for (var y = 0; y < this.cellsY; ++y) {
             var yLow = y > 0 ? -1 : 0,
                 yHi = y < lastY ? 1 : 0;
@@ -346,7 +392,7 @@ var WAVES = (function () {
                     newH = prevH + newV * elapsed;
 
                 }
-                newH = Math.max(-1, Math.min(1, newH));
+                newH = clamp(newH, -1, 1);
 
                 this.cells[i + hOut] = newH;
                 this.cells[i + V] = newV;
@@ -357,6 +403,7 @@ var WAVES = (function () {
                 ++index;
             }
         }
+
         this.hA = hOut;
         this.hB = hIn;
     };
@@ -387,6 +434,19 @@ var WAVES = (function () {
             } else {
                 this.ocean.stop();
             }
+        }
+
+        var forward = false,
+            steer = 0;
+
+        if (keyboard.isKeyDown(IO.KEYS.Up) || keyboard.isAsciiDown("W")) {
+            forward = true;
+        }
+        if (keyboard.isKeyDown(IO.KEYS.Left) || keyboard.isAltDown("A")) {
+            steer = 1;
+        }
+        if (keyboard.isKeyDown(IO.KEYS.Right) || keyboard.isAltDown("D")) {
+            steer = -1;
         }
 
         if (pointer.wheelY) {
@@ -421,7 +481,7 @@ var WAVES = (function () {
 
         this.propagate(fixedTime);
 
-        this.boat.update(fixedTime, this);
+        this.boat.update(fixedTime, this, forward, steer);
     };
 
     View.prototype.render = function (room, width, height) {
