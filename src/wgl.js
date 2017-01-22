@@ -154,6 +154,26 @@ var WGL = (function () {
         this.vrDisplay.submitFrame(pose);
     };
 
+    Viewer.prototype.stabDirection = function (canvas, canvasX, canvasY, viewportRegion) {
+        var width = canvas.width,
+            height = canvas.height;
+        if (viewportRegion == "safe") {
+            width = this.safeSize.x;
+            height = this.safeSize.y;
+        }
+        
+        var aspect = height / width,
+            viewScale =  Math.tan(this.fov * R2.DEG_TO_RAD * 0.5),
+            normalizedX = canvasX / (width * 0.5) - 1,
+            normalizedY = (1 - canvasY / (height * 0.5));
+
+        return new R3.V(
+            normalizedX * viewScale,
+            normalizedY * viewScale * aspect,
+            -1
+        );
+    };
+
     function Room(canvas) {
         this.canvas = canvas;
         this.gl = getGlContext(canvas);
@@ -335,6 +355,10 @@ var WGL = (function () {
 
         return this.setupShaderProgram(vertexSource, fragmentSource);
     };
+
+    Room.prototype.stabDirection = function(canvasX, canvasY, viewportRegion) {
+        return this.viewer.stabDirection(this.canvas, canvasX, canvasY, viewportRegion);
+    }
 
     Room.prototype.setupDrawTest = function (program) {
         var vertices = [

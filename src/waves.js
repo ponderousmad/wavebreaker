@@ -22,12 +22,12 @@ var WAVES = (function () {
         this.room = null;
         this.distance = 1.5;
         this.center = new R3.V(0, 0, 0);
-        this.eyeHeight = -.3;
+        this.eyeHeight = -0.3;
 
         var self = this;
 
-        this.cellsX = 200;
-        this.cellsY = 200;
+        this.cellsX = 250;
+        this.cellsY = 250;
         this.cellCount = this.cellsX * this.cellsY;
 
         this.cells = new Float32Array(this.cellCount * CELL_SIZE);
@@ -35,6 +35,9 @@ var WAVES = (function () {
         this.hB = H_ODD;
 
         this.time = 0;
+
+        this.forceX = this.cellsX / 2;
+        this.forceY = this.cellsY / 2;
     }
 
     function updateMeshVertex(mesh, index, z, b) {
@@ -79,7 +82,7 @@ var WAVES = (function () {
                     newH = this.cells[i + hIn] + newV * elapsed;
                 newH = Math.max(-1, Math.min(1, newH));
 
-                if (force && x == this.cellsX / 4 && y == this.cellsY / 4) {
+                if (force && x == this.forceX && y == this.forceY) {
                     newV = 0;
                     newH = Math.sin(this.time/20 * Math.PI) * 0.0005;
                 }
@@ -110,21 +113,29 @@ var WAVES = (function () {
         if (keyboard.isAsciiDown("S")) {
             force = true;
         }
-        this.propagate(2, force);
-        console.log("Propagated: ", elapsed);
 
         if (pointer.wheelY) {
         }
 
-        if (pointer.activated()) {
-        }
-
         if (pointer.primary) {
+            var orientation = this.viewOrientation(),
+                viewStab = this.room.stabDirection(pointer.primary.x, pointer.primary.y, "safe"),
+                stabDir = R3.makeRotateQ(orientation.inverse()).transform(viewStab),
+                stab = R3.makeRotateQ(orientation).transformP(this.viewPosition());
+            stab.addScaled(stabDir, -stab.z / stabDir.z);
+
+            if (Math.abs(stab.x) < 1 && Math.abs(stab.y) < 1) {
+                force = true;
+                this.forceX = Math.round((stab.x + 1) * 0.5 * this.cellsX);
+                this.forceY = Math.round((stab.y + 1) * 0.5 * this.cellsY);
+            }
         }
 
         if (keyboard.isShiftDown()) {
         } else if(keyboard.isAltDown()) {
         }
+
+        this.propagate(2, force);
     };
 
     View.prototype.render = function (room, width, height) {
@@ -167,12 +178,20 @@ var WAVES = (function () {
             }
             room.viewer.submitVR();
         }
+        room.viewer.orientation = this.viewOrientation();
+        room.viewer.position = this.viewPosition();
         if (room.viewer.showOnPrimary()) {
-            room.viewer.orientation = R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
-            room.viewer.position = new R3.V(0, this.eyeHeight, this.distance);
             room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
             this.drawMeshes(room);
         }
+    };
+
+    View.prototype.viewOrientation = function () {
+        return R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
+    }
+
+    View.prototype.viewPosition = function () {
+        return new R3.V(0, this.eyeHeight, this.distance);
     };
 
     View.prototype.drawMeshes = function (room) {
