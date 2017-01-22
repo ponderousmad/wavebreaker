@@ -293,6 +293,7 @@ var WGL = (function () {
 
             mesh.drawData = {
                 vertexBuffer: this.setupFloatBuffer(mesh.vertices, false, drawHint),
+                normalBuffer: this.setupFloatBuffer(mesh.normals),
                 uvBuffer: this.setupFloatBuffer(mesh.uvs),
                 colorBuffer: this.setupFloatBuffer(mesh.colors, false, drawHint),
                 triBuffer: this.setupElementBuffer(mesh.tris)
@@ -311,6 +312,10 @@ var WGL = (function () {
             this.updateBuffer(draw.vertexBuffer, mesh.vertices);
         }
         this.gl.vertexAttribPointer(program.vertexPosition, 3, this.gl.FLOAT, false, 0, 0);
+        if (program.vertexNormal !== null) {
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.normalBuffer);
+            this.gl.vertexAttribPointer(program.vertexNormal, 3, this.gl.FLOAT, false, 0, 0);
+        }
         if (program.vertexUV !== null) {
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.uvBuffer);
             this.gl.vertexAttribPointer(program.vertexUV, 2, this.gl.FLOAT, false, 0, 0);
@@ -330,17 +335,23 @@ var WGL = (function () {
         mesh.updated = false;
     };
 
-    Room.prototype.setupView = function (program, viewportRegion, viewVariable, perspectiveVariable, transform, eye) {
+    Room.prototype.setupView = function (program, viewportRegion, viewVariable, perspectiveVariable, normalVariable, transform, eye) {
         var aspect = this.viewer.viewport(this.gl, this.canvas, viewportRegion),
             perspective = eye ? this.viewer.perspectiveFOV(eye) : this.viewer.perspective(aspect),
             view = this.viewer.view(eye),
             pLocation = this.gl.getUniformLocation(program, perspectiveVariable),
-            vLocation = this.gl.getUniformLocation(program, viewVariable);
+            vLocation = this.gl.getUniformLocation(program, viewVariable),
+            nLocation = normalVariable ? this.gl.getUniformLocation(program, normalVariable) : null;
         if (transform) {
             view = R3.matmul(view, transform);
         }
         this.gl.uniformMatrix4fv(pLocation, false, perspective.m);
         this.gl.uniformMatrix4fv(vLocation, false, view.m);
+        if (nLocation) {
+            var normal = view.inverse();
+            normal.transpose();
+            this.gl.uniformMatrix4fv(nLocation, false, normal.m);
+        }
     };
 
     Room.prototype.bindTexture = function (program, variable, texture) {
@@ -462,8 +473,128 @@ var WGL = (function () {
         this.index += other.index;
     };
 
+    function makeCube() {
+        var mesh = new Mesh();
+        mesh.verticies = [
+            -1, -1, -1, //0
+            -1, -1,  1, //1
+            -1,  1,  1, //2
+            -1,  1, -1, //3
+
+             1, -1, -1,
+             1, -1,  1,
+             1,  1,  1,
+             1,  1, -1,
+
+            -1, -1, -1,
+            -1, -1,  1,
+             1, -1,  1,
+             1, -1, -1,
+
+            -1,  1, -1,
+            -1,  1, -1,
+            -1,  1, -1,
+            -1,  1, -1,
+
+            -1, -1, -1,
+            -1,  1, -1,
+             1,  1, -1,
+             1, -1, -1,
+
+            -1, -1,  1,
+            -1,  1,  1,
+             1,  1,  1,
+             1, -1,  1
+        ];
+
+        mesh.normals = [
+            -1, 0, 0,
+            -1, 0, 0,
+            -1, 0, 0,
+            -1, 0, 0,
+
+             1, 0, 0,
+             1, 0, 0,
+             1, 0, 0,
+             1, 0, 0,
+
+            0, -1, 0,
+            0, -1, 0,
+            0, -1, 0,
+            0, -1, 0,
+
+            0,  1, 0,
+            0,  1, 0,
+            0,  1, 0,
+            0,  1, 0,
+
+            0, 0, -1,
+            0, 0, -1,
+            0, 0, -1,
+            0, 0, -1,
+
+            0, 0,  1,
+            0, 0,  1,
+            0, 0,  1,
+            0, 0,  1
+        ];
+
+        mesh.uvs = [
+            0.02, 0.02,
+            0.02, 0.32,
+            0.32, 0.32,
+            0.32, 0.02,
+
+            0.02, 0.35,
+            0.02, 0.65,
+            0.32, 0.65,
+            0.32, 0.35,
+
+            0.35, 0.02,
+            0.35, 0.32,
+            0.65, 0.32,
+            0.65, 0.02,
+
+            0.35, 0.35,
+            0.35, 0.65,
+            0.65, 0.65,
+            0.65, 0.35,
+
+            0.68, 0.01,
+            0.68, 0.31,
+            0.98, 0.31,
+            0.98, 0.01,
+
+            0.68, 0.35,
+            0.68, 0.65,
+            0.98, 0.65,
+            0.98, 0.35,
+        ];
+
+        var twoFace = [0, 1, 3, 1, 2, 3, 4, 7, 5, 5, 7, 6];
+        mesh.tris = [];
+
+        for (var f = 0; f < 3; ++f) {
+            for (var i = 0; i < twoFace.length; ++i) {
+                mesh.tris.push(twoFace[i] + f * twoFace.length);
+            }
+        }
+        mesh.bbox.envelope(new R3.V(1,1,1));
+        mesh.bbox.envelope(new R3.V(-1,-1,-1));
+
+        return mesh;
+    }
+
+    function makeCylinder() {
+        var mesh = new Mesh();
+
+        return mesh;
+    }
+
     return {
         Room: Room,
-        Mesh: Mesh
+        Mesh: Mesh,
+        makeCube: makeCube,
+        makeCyclinder: makeCylinder
     };
 }());

@@ -8,240 +8,52 @@ var WAVES = (function () {
         FORCE_SCALE = 0.4,
         DECAY_TIME = 200;
 
-    function Cube() {
-        this.verticies = [
-            -1, -1, -1, //0
-            -1, -1,  1, //1
-            -1,  1,  1, //2
-            -1,  1, -1, //3
-
-             1, -1, -1,
-             1, -1,  1,
-             1,  1,  1,
-             1,  1, -1,
-
-            -1, -1, -1,
-            -1, -1,  1,
-             1, -1,  1,
-             1, -1, -1,
-
-            -1,  1, -1,
-            -1,  1, -1,
-            -1,  1, -1,
-            -1,  1, -1,
-
-            -1, -1, -1,
-            -1,  1, -1,
-             1,  1, -1,
-             1, -1, -1,
-
-            -1, -1,  1,
-            -1,  1,  1,
-             1,  1,  1,
-             1, -1,  1
-        ];
-
-        this.normals = [
-            -1, 0, 0,
-            -1, 0, 0,
-            -1, 0, 0,
-            -1, 0, 0,
-
-             1, 0, 0,
-             1, 0, 0,
-             1, 0, 0,
-             1, 0, 0,
-
-            0, -1, 0,
-            0, -1, 0,
-            0, -1, 0,
-            0, -1, 0,
-
-            0,  1, 0,
-            0,  1, 0,
-            0,  1, 0,
-            0,  1, 0,
-
-            0, 0, -1,
-            0, 0, -1,
-            0, 0, -1,
-            0, 0, -1,
-
-            0, 0,  1,
-            0, 0,  1,
-            0, 0,  1,
-            0, 0,  1
-        ];
-
-        this.uvs = [
-            0.02, 0.02,
-            0.02, 0.32,
-            0.32, 0.32,
-            0.32, 0.02,
-
-            0.02, 0.35,
-            0.02, 0.65,
-            0.32, 0.65,
-            0.32, 0.35,
-
-            0.35, 0.02,
-            0.35, 0.32,
-            0.65, 0.32,
-            0.65, 0.02,
-
-            0.35, 0.35,
-            0.35, 0.65,
-            0.65, 0.65,
-            0.65, 0.35,
-
-            0.68, 0.01,
-            0.68, 0.31,
-            0.98, 0.31,
-            0.98, 0.01,
-
-            0.68, 0.35,
-            0.68, 0.65,
-            0.98, 0.65,
-            0.98, 0.35,
-        ];
-
-        var twoFace = [0, 1, 3, 1, 2, 3, 4, 7, 5, 5, 7, 6];
-        this.tris = [];
-
-        for (var f = 0; f < 3; ++f) {
-            for (var i = 0; i < twoFace.length; ++i) {
-                this.tris.push(twoFace[i] + f * twoFace.length);
-            }
-        }
-    }
-
-    function Cylinder() {
-        this.verticies = [
-            -1, -1, -1, //0
-            -1, -1,  1, //1
-            -1,  1,  1, //2
-            -1,  1, -1, //3
-
-             1, -1, -1,
-             1, -1,  1,
-             1,  1,  1,
-             1,  1, -1,
-
-            -1, -1, -1,
-            -1, -1,  1,
-             1, -1,  1,
-             1, -1, -1,
-
-            -1,  1, -1,
-            -1,  1, -1,
-            -1,  1, -1,
-            -1,  1, -1,
-
-            -1, -1, -1,
-            -1,  1, -1,
-             1,  1, -1,
-             1, -1, -1,
-
-            -1, -1,  1,
-            -1,  1,  1,
-             1,  1,  1,
-             1, -1,  1
-        ];
-
-        this.normals = [
-            -1, 0, 0,
-            -1, 0, 0,
-            -1, 0, 0,
-            -1, 0, 0,
-
-             1, 0, 0,
-             1, 0, 0,
-             1, 0, 0,
-             1, 0, 0,
-
-            0, -1, 0,
-            0, -1, 0,
-            0, -1, 0,
-            0, -1, 0,
-
-            0,  1, 0,
-            0,  1, 0,
-            0,  1, 0,
-            0,  1, 0,
-
-            0, 0, -1,
-            0, 0, -1,
-            0, 0, -1,
-            0, 0, -1,
-
-            0, 0,  1,
-            0, 0,  1,
-            0, 0,  1,
-            0, 0,  1
-        ];
-
-        this.uvs = [
-            0.02, 0.02,
-            0.02, 0.32,
-            0.32, 0.32,
-            0.32, 0.02,
-
-            0.02, 0.35,
-            0.02, 0.65,
-            0.32, 0.65,
-            0.32, 0.35,
-
-            0.35, 0.02,
-            0.35, 0.32,
-            0.65, 0.32,
-            0.65, 0.02,
-
-            0.35, 0.35,
-            0.35, 0.65,
-            0.65, 0.65,
-            0.65, 0.35,
-
-            0.68, 0.01,
-            0.68, 0.31,
-            0.98, 0.31,
-            0.98, 0.01,
-
-            0.68, 0.35,
-            0.68, 0.65,
-            0.98, 0.65,
-            0.98, 0.35,
-        ];
-    }
-
     function Boat() {
-        this.verticies = [
-            -1, -1, -1, //0
-            -1, -1,  1, //1
-            -1,  1,  1, //2
-            -1,  1, -1, //3
+        var bow = new R3.V(0.0, 1.0, 0.0),
+            base = new R3.V(0.0, 0.0, -0.25),
+            left = new R3.V(-0.5, -1.0, 0.0),
+            right = new R3.V( 0.5, -1.0, 0.0),
+            keel = R3.subVectors(bow, keel),
+            points = [
+                bow, left, right,
+                bow, left, base,
+                bow, base, right,
+                base, right, left
+            ],
+            faceNormals = [
+                new R3.V(0, 0, 1),
+                new R3.V(0, -1, 0),
+                keel.cross(R3.subVectors(left, base)),
+                keel.cross(R3.subVectors(left, keel))
+            ];
+        this.vertices = [];
+        this.normals = [];
+        this.tris = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
-        ];
-
-        this.normals = [
-            -1, 0, 0,
-            -1, 0, 0,
-            -1, 0, 0,
-            -1, 0, 0,
-        ];
+        for (var p = 0; p < this.points.length; ++p) {
+            points[p].pushOn(this.points[p]);
+        }
+        for (var n = 0; n < this.faceNormals.length; ++n) {
+            var normal = this.faceNormals[n];
+            normal.pushOn(this.normals);
+            normal.pushOn(this.normals);
+            normal.pushOn(this.normals);
+        }
 
         this.uvs = [
-            0.02, 0.02,
-            0.02, 0.32,
-            0.32, 0.32,
-            0.32, 0.02,
-
-            0.02, 0.35,
-            0.02, 0.65,
-            0.32, 0.65,
-            0.32, 0.35
+            0.5, 1.0,
+            0.0, 0.0,
+            1.0, 0.0,
+            0.5, 1.0,
+            0.0, 0.0,
+            1.0, 0.0,
+            0.5, 1.0,
+            0.0, 0.0,
+            1.0, 0.0,
+            0.5, 1.0,
+            0.0, 0.0,
+            1.0, 0.0
         ];
-
-        this.tris = [];
     }
 
     function RegionPoint(x, y) {
@@ -516,6 +328,7 @@ var WAVES = (function () {
             this.program = {
                 shader: shader,
                 vertexPosition: room.bindVertexAttribute(shader, "aPos"),
+                vertexNormal: room.bindVertexAttribute(shader, "aNormal"),
                 vertexUV: room.bindVertexAttribute(shader, "aUV"),
                 vertexColor: room.bindVertexAttribute(shader, "aColor"),
                 textureVariable: "uSampler"
@@ -544,7 +357,7 @@ var WAVES = (function () {
                 views = [vrFrame.leftViewMatrix, vrFrame.rightViewMatrix];
             for (var e = 0; e < eyes.length; ++e) {
                 var viewMatrix = R3.matmul(new R3.M(views[e]), m);
-                room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", viewMatrix, vrFrame);
+                room.setupView(this.program.shader, eyes[e], "uMVMatrix", "uPMatrix", "uNormalMatrix", viewMatrix, vrFrame);
                 this.drawMeshes(room);
             }
             room.viewer.submitVR();
@@ -552,7 +365,7 @@ var WAVES = (function () {
         room.viewer.orientation = this.viewOrientation();
         room.viewer.position = this.viewPosition();
         if (room.viewer.showOnPrimary()) {
-            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix");
+            room.setupView(this.program.shader, "safe", "uMVMatrix", "uPMatrix", "uNormalMatrix");
             this.drawMeshes(room);
         }
     };
