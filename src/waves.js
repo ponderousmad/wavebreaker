@@ -313,7 +313,10 @@ var WAVES = (function () {
         }
     };
 
-    Thumper.prototype.start = function () {
+    Thumper.prototype.start = function (reset) {
+        if (reset) {
+            this.stop();
+        }
         this.active = true;
     };
 
@@ -466,9 +469,11 @@ var WAVES = (function () {
         }
 
         if (keyboard.wasAsciiPressed("O")) {
-            this.ocean.start();
-        } else if(keyboard.wasAsciiPressed("P")) {
-            this.ocean.stop();
+            if (!this.ocean.active) {
+                this.ocean.start(true);
+            } else {
+                this.ocean.stop();
+            }
         }
 
         if (pointer.wheelY) {
