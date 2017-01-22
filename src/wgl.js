@@ -447,13 +447,20 @@ var WGL = (function () {
         this.updated = false;
     }
 
+    function fixComponent(c) {
+        if (c === undefined || c === null) {
+            return 1;
+        }
+        return c;
+    }
+
     Mesh.prototype.addVertex = function (p, n, u, v, r, g, b, a) {
         p.pushOn(this.vertices);
         n.pushOn(this.normals);
-        this.colors.push(r || 0);
-        this.colors.push(g || 0);
-        this.colors.push(b || 0);
-        this.colors.push(a || 0);
+        this.colors.push(fixComponent(r));
+        this.colors.push(fixComponent(g));
+        this.colors.push(fixComponent(b));
+        this.colors.push(fixComponent(a));
         this.uvs.push(u);
         this.uvs.push(v);
         this.index += 1;
@@ -471,6 +478,26 @@ var WGL = (function () {
         this.normals = this.normals.concat(other.normals);
         this.uvs = this.uvs.concat(other.uvs);
         this.index += other.index;
+    };
+
+    Mesh.prototype.finalize = function (min, max) {
+        this.bbox.envelope(min);
+        this.bbox.envelope(max);
+        this.index = this.vertices.length / 3;
+        if (this.index != this.normals.length / 3) {
+            throw "Normals missing!";
+        }
+        if (this.index != this.uvs.length / 2) {
+            throw "UVs missing!";
+        }
+        if (this.index != this.colors.length / 4) {
+            for (var i = this.colors.length / 4; i < this.index; ++i) {
+                this.colors.push(1);
+                this.colors.push(1);
+                this.colors.push(1);
+                this.colors.push(0);
+            }
+        }
     };
 
     function makeCube() {
@@ -579,15 +606,13 @@ var WGL = (function () {
                 mesh.tris.push(twoFace[i] + f * twoFace.length);
             }
         }
-        mesh.bbox.envelope(new R3.V(1,1,1));
-        mesh.bbox.envelope(new R3.V(-1,-1,-1));
-
+        mesh.finalize(new R3.V(1,1,1), new R3.V(-1,-1,-1));
         return mesh;
     }
 
     function makeCylinder() {
         var mesh = new Mesh();
-
+        mesh.finalize(new R3.V(1,1,1), new R3.V(-1,-1,-1));
         return mesh;
     }
 
