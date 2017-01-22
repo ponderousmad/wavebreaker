@@ -451,7 +451,7 @@ var R3 = (function () {
         return inv;
     };
 
-    M.prototype.transpose = function (out) {
+    M.prototype.transpose = function () {
         for (var c = 0; c < D4; ++c) {
             for (var r = c + 1; r < D4; ++r) {
                 var atRC = this.m[at(r, c)];
