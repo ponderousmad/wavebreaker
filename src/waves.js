@@ -484,6 +484,8 @@ var WAVES = (function () {
         }
 
         if (pointer.wheelY) {
+            var WHEEL_BASE = 1000;
+            this.distance *= (WHEEL_BASE + pointer.wheelY) / WHEEL_BASE;
         }
 
         if (pointer.primary) {
