@@ -9,23 +9,23 @@ var WAVES = (function () {
         DECAY_TIME = 200;
 
     function Boat() {
-        var boatScale = R3.makeScale(0.02),
+        var boatScale = R3.makeScale(0.05),
             bow = new R3.V(0.0, 1.0, 0.5),
-            base = new R3.V(0.0, 0.0, -0.05),
-            left = new R3.V(-0.5, -1.0, 0.02),
-            right = new R3.V( 0.5, -1.0, 0.02),
+            base = new R3.V(0.0, -1.0, -0.05),
+            left = new R3.V(-0.5, -1.0, 0.20),
+            right = new R3.V( 0.5, -1.0, 0.20),
             keel = R3.subVectors(bow, base),
             points = [
                 bow, left, right,
                 bow, left, base,
                 bow, base, right,
-                base, left, right
+                base, right, left
             ],
             faceNormals = [
                 new R3.V(0, 0, 1),
-                new R3.V(0, -1, 0),
                 keel.cross(R3.subVectors(left, base)),
-                keel.cross(R3.subVectors(left, keel))
+                keel.cross(R3.subVectors(left, keel)),
+                new R3.V(0, -1, 0),
             ],
             mesh = new WGL.Mesh();
 
