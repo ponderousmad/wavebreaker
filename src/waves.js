@@ -18,9 +18,9 @@ var WAVES = (function () {
         this.meshes = null;
         this.program = null;
         this.yAxisAngle = 0;
-        this.xAxisAngle = -Math.PI/4;
+        this.xAxisAngle = -Math.PI/3.5;
         this.room = null;
-        this.distance = 1.5;
+        this.distance = 1.8;
         this.center = new R3.V(0, 0, 0);
         this.eyeHeight = -0.3;
 
