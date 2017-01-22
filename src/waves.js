@@ -271,10 +271,8 @@ var WAVES = (function () {
         this.center = new R3.V(0, 0, 0);
         this.eyeHeight = -0.3;
 
-        var self = this;
-
-        this.cellsX = 250;
-        this.cellsY = 250;
+        this.cellsX = 254;
+        this.cellsY = 256;
         this.cellCount = this.cellsX * this.cellsY;
 
         this.cells = new Float32Array(this.cellCount * CELL_SIZE);
@@ -295,6 +293,8 @@ var WAVES = (function () {
 
         this.surface = this.constructSurface();
         this.meshes = [this.surface, this.boat.mesh];
+
+        this.audioPlayback = null;
     }
 
     View.prototype.toCellX = function (worldX) {
@@ -408,6 +408,26 @@ var WAVES = (function () {
         this.hB = hIn;
     };
 
+    View.prototype.soundWaves = function (audioProcessingEvent) {
+        var outputBuffer = audioProcessingEvent.outputBuffer;
+        for (var channel = 0; channel < outputBuffer.numberOfChannels; channel++) {
+            var buffer = outputBuffer.getChannelData(channel),
+                offset = this.hA,
+                prev = 0,
+                s = 0,
+                stride = this.cellsX,
+                cells = this.cellsY,
+                repeats = audioProcessingEvent.inputBuffer.getChannelData(channel).length / this.cellsY;
+            for (var c = 0; c < cells; ++c) {
+                var value = this.cells[((c * stride) * CELL_SIZE) + this.hA] * 500;
+                for (var r = 0; r < repeats; ++r) {
+                    buffer[s] = value;
+                    ++s;
+                }
+            }
+        }
+    };
+
     View.prototype.setRoom = function (room) {
         this.room = room;
     };
@@ -433,6 +453,20 @@ var WAVES = (function () {
                 this.ocean.start(true);
             } else {
                 this.ocean.stop();
+            }
+        }
+
+        if (keyboard.wasAsciiPressed("T")) {
+            if (this.audioPlayback == null) {
+                var self = this;
+                this.audioPlayback = BLORT.playDynamic(
+                    function (audioProcessingEvent) {
+                        self.soundWaves(audioProcessingEvent);
+                    }, 4096
+                );
+            } else {
+                this.audioPlayback();
+                this.audioPlayback = null;
             }
         }
 
