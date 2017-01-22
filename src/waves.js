@@ -244,6 +244,95 @@ var WAVES = (function () {
         this.tris = [];
     }
 
+    function RegionPoint(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    RegionPoint.prototype.includes = function(x, y) {
+        return this.x == x && this.y == y;
+    };
+
+    RegionLineX.prototype.includes = function(x, y) {
+        return this.x == x && this.y == y;
+    };
+
+    function RegionLineX(x, yMin, yMax) {
+        this.x = x;
+        this.yMin = yMin;
+        this.yMax = yMax;
+    }
+
+    RegionLineX.prototype.includes = function(x, y) {
+        return this.x == x && this.yMin <= y && y <= this.yMax;
+    };
+
+    function RegionLineY(y, xMin, xMax) {
+        this.y = y;
+        this.xMin = xMin;
+        this.xMax = xMax;
+    }
+
+    RegionLineX.prototype.includes = function(x, y) {
+        return this.x == x && this.yMin <= y && y <= this.yMax;
+    };
+
+
+    function Thumper(region, flip) {
+        this.frequency = Math.PI / 20;
+        this.amplitude = 0.0002;
+
+        this.time = 0;
+        this.active = false;
+
+        this.flip = flip || false;
+        this.region = region;
+        this.lastValue = 0;
+    }
+
+    Thumper.prototype.scaleFrequency = function (factor) {
+        this.frequency *= factor;
+        this.time /= factor;
+    };
+
+    Thumper.prototype.scaleAmplitude = function (factor) {
+        this.amplitude *= factor;
+    };
+
+    Thumper.prototype.includes = function (x, y) {
+        return this.active && this.region.includes(x, y);
+    };
+
+    Thumper.prototype.update = function (elapsed) {
+        this.time += elapsed;
+    };
+
+    Thumper.prototype.start = function () {
+        this.active = true;
+    };
+
+    Thumper.prototype.stop = function () {
+        this.active = false;
+        this.time = 0;
+        this.lastValue = 0;
+    };
+
+    Thumper.prototype.delta = function() {
+        var value = Math.sin(this.time * this.frequency) * this.amplitude,
+            result = value - this.lastValue;
+        this.lastValue = value;
+        return this.flip ? -result : result;
+    };
+
+    function Damper(region, attenuation) {
+        this.region = region;
+        this.attenuation = attenuation;
+    }
+
+    Damper.prototype.includes = function (x, y) {
+        return this.region.includes(x, y);
+    };
+
     function View() {
         this.clearColor = [0, 0, 0, 1];
         this.maximize = true;
@@ -272,13 +361,11 @@ var WAVES = (function () {
 
         this.time = 0;
 
-        this.forceX = this.cellsX / 2;
-        this.forceY = this.cellsY / 2;
-
         this.dampenBoundary = false;
 
-        this.thumperRate = 20 / Math.PI;
-        this.thumperAmplitude = 0.0005;
+        this.clickThumper = new Thumper(new RegionPoint(this.cellsX / 2, this.cellsY / 2), true);
+
+        this.thumpers = [this.clickThumper];
     }
 
     function updateMeshVertex(mesh, index, z, b) {
@@ -286,9 +373,9 @@ var WAVES = (function () {
         mesh.colors[index * 4 + 0] = 1 - b;
         mesh.colors[index * 4 + 2] = b;
         mesh.updated = true;
-    };
+    }
 
-    View.prototype.propagate = function (elapsed, force) {
+    View.prototype.propagate = function (elapsed) {
         var index = 0,
             hIn = this.hA,
             hOut = this.hB,
@@ -299,36 +386,49 @@ var WAVES = (function () {
             var yLow = y > 0 ? -1 : 0,
                 yHi = y < lastY ? 1 : 0;
             for(var x = 0; x < this.cellsX; ++x) {
-                var i = index * CELL_SIZE,
+                var force = false,
+                    i = index * CELL_SIZE,
                     prevH = this.cells[i + hIn],
-                    hSum = -prevH,
-                    count = -1,
-                    xHi = x < lastX ? 1 : 0,
-                    xLow = x > 0 ? -1 : 0;
+                    prevV = this.cells[i + V],
+                    newH = prevH,
+                    newV = prevV;
 
-                for (var dy = yLow; dy <= yHi; ++dy) {
-                    var yOffset = dy * this.cellsX;
-                    for (var dx = xLow; dx <= xHi; ++dx) {
-                        ++count;
-                        var offset = ((dx + yOffset) * CELL_SIZE);
-                        hSum += this.cells[i + offset + hIn];
+                for (var t = 0; t < this.thumpers.length; ++t) {
+                    var thumper = this.thumpers[t];
+                    if (thumper.includes(x, y)) {
+                        force = true;
+                        var delta = thumper.delta();
+                        newH = prevH + delta;
+                        newV = delta / elapsed;
+                        break;
                     }
                 }
-                if (this.dampenBoundary) {
-                    count = 8;
-                }
 
-                var hDiff = (hSum / count) - prevH,
-                    prevV = this.cells[i + V],
-                    deltaV = hDiff * FORCE_SCALE * elapsed,
-                    newV = prevV * decay + deltaV,
-                    newH = this.cells[i + hIn] + newV * elapsed;
+                if (!force) {
+                    var hSum = -prevH,
+                        count = -1,
+                        xHi = x < lastX ? 1 : 0,
+                        xLow = x > 0 ? -1 : 0;
+
+                    for (var dy = yLow; dy <= yHi; ++dy) {
+                        var yOffset = dy * this.cellsX;
+                        for (var dx = xLow; dx <= xHi; ++dx) {
+                            ++count;
+                            var offset = ((dx + yOffset) * CELL_SIZE);
+                            hSum += this.cells[i + offset + hIn];
+                        }
+                    }
+                    if (this.dampenBoundary) {
+                        count = 8;
+                    }
+
+                    var hDiff = (hSum / count) - prevH,
+                        deltaV = hDiff * FORCE_SCALE * elapsed;
+                    newV = prevV * decay + deltaV;
+                    newH = prevH + newV * elapsed;
+
+                }
                 newH = Math.max(-1, Math.min(1, newH));
-
-                if (force && x == this.forceX && y == this.forceY) {
-                    newV = 0;
-                    newH = Math.sin(this.time / this.thumperRate) * this.thumperAmplitude;
-                }
 
                 this.cells[i + hOut] = newH;
                 this.cells[i + V] = newV;
@@ -350,20 +450,23 @@ var WAVES = (function () {
     };
 
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
-        var fixedTime = 2,
-            force = false;
+        var fixedTime = 2;
         this.time += fixedTime;
 
         if (keyboard.wasAsciiPressed("K")) {
-            this.thumperRate *= 2;
+            this.clickThumper.scaleFrequency(2);
         } else if(keyboard.wasAsciiPressed("J")) {
-            this.thumperRate /= 2;
+            this.clickThumper.scaleFrequency(0.5);
         }
 
         if (keyboard.wasAsciiPressed("M")) {
-            this.thumperAmplitude *= 2;
+            this.clickThumper.scaleAmplitude(2);
         } else if(keyboard.wasAsciiPressed("N")) {
-            this.thumperAmplitude /= 2;
+            this.clickThumper.scaleAmplitude(0.5);
+        }
+
+        for (var t = 0; t < this.thumpers.length; ++t) {
+            this.thumpers[t].update(fixedTime);
         }
 
         if (pointer.wheelY) {
@@ -376,18 +479,23 @@ var WAVES = (function () {
                 stab = R3.makeRotateQ(orientation).transformP(this.viewPosition());
             stab.addScaled(stabDir, -stab.z / stabDir.z);
 
+            var xCell = Math.round((stab.x + 1) * 0.5 * this.cellsX),
+                yCell = Math.round((stab.y + 1) * 0.5 * this.cellsY);
             if (Math.abs(stab.x) < 1 && Math.abs(stab.y) < 1) {
-                force = true;
-                this.forceX = Math.round((stab.x + 1) * 0.5 * this.cellsX);
-                this.forceY = Math.round((stab.y + 1) * 0.5 * this.cellsY);
+                this.clickThumper.region = new RegionPoint(xCell, yCell);
+                this.clickThumper.start();
+            } else {
+                this.clickThumper.stop();
             }
+        } else {
+            this.clickThumper.stop();
         }
 
         if (keyboard.isShiftDown()) {
         } else if(keyboard.isAltDown()) {
         }
 
-        this.propagate(2, force);
+        this.propagate(2);
     };
 
     View.prototype.render = function (room, width, height) {
