@@ -6,13 +6,14 @@ var WAVES = (function () {
         V = 2,
         CELL_SIZE = 3,
         FORCE_SCALE = 0.4,
-        DECAY_TIME = 200;
+        DECAY_TIME = 200,
+        VERTICAL_SCALE = 500;
 
     function Boat() {
-        var bow = new R3.V(0.0, 1.0, 0.5),
-            base = new R3.V(0.0, -1.0, -0.05),
-            left = new R3.V(-0.5, -1.0, 0.20),
-            right = new R3.V( 0.5, -1.0, 0.20),
+        var bow = new R3.V(0.0, 1.0, 0.1),
+            base = new R3.V(0.0, -1.0, -0.20),
+            left = new R3.V(-0.5, -1.0, 0.10),
+            right = new R3.V( 0.5, -1.0, 0.10),
             keel = R3.subVectors(bow, base),
             points = [
                 bow, left, right,
@@ -55,9 +56,51 @@ var WAVES = (function () {
         ];
         mesh.tris = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
         mesh.finalize();
-        mesh.transform = R3.makeScale(0.1);
+        this.scale = 0.05;
+        mesh.transform = R3.makeScale(this.scale);
         this.mesh = mesh;
+        this.position = new R3.V(0, 0, 0);
+        var physicsScale = 0.5;
+        this.bow = bow.scaled(physicsScale);
+        this.left = left.scaled(physicsScale);
+        this.right = right.scaled(physicsScale);
     }
+
+    Boat.prototype.update = function(elapsed, view) {
+        var m = this.mesh.transform,
+            up = new R3.V(0, 0, 1),
+            bow = m.transformP(this.bow),
+            left = m.transformP(this.left),
+            right = m.transformP(this.right)
+        bow.z = view.getHeight(bow.x, bow.y);
+        left.z = view.getHeight(left.x, left.y);
+        right.z = view.getHeight(right.x, right.y);
+
+        this.position.z = (bow.z + left.z + right.z) / 3;
+
+        var rightDir = R3.subVectors(right, bow),
+            leftDir = R3.subVectors(left, bow);
+        rightDir.normalize();
+        leftDir.normalize();
+
+        var normal = rightDir.cross(leftDir);
+        normal.normalize();
+        var angle = Math.acos(normal.dot(up)),
+            pull = R3.vectorOntoPlane(new R3.V(0, 0, -1), normal);
+        pull.z = 0;
+        this.position.addScaled(pull, 0.015);
+        this.position.x = Math.min(1, Math.max(-1, this.position.x));
+        this.position.y = Math.min(1, Math.max(-1, this.position.y));
+
+        m.setIdentity();
+        m.translate(this.position);
+        m.scale(this.scale);
+        if (angle > (Math.PI * 0.01)) {
+            var rotation = R3.makeRotateQ(R3.angleAxisQ(angle, normal.cross(up)));
+            R3.matmul(m, rotation, m);
+        }
+        this.mesh.transform = m;
+    };
 
     function RegionPoint(x, y) {
         this.x = x;
@@ -165,9 +208,9 @@ var WAVES = (function () {
         this.meshes = null;
         this.program = null;
         this.yAxisAngle = 0;
-        this.xAxisAngle = -Math.PI/3.5;
+        this.xAxisAngle = -Math.PI/5;
         this.room = null;
-        this.distance = 1.8;
+        this.distance = 1.5;
         this.center = new R3.V(0, 0, 0);
         this.eyeHeight = -0.3;
 
@@ -198,11 +241,11 @@ var WAVES = (function () {
     }
 
     View.prototype.toCellX = function (worldX) {
-        return Math.round((worldX + 1) * 0.5 * this.cellsX);
+        return Math.min(this.cellsX, Math.max(0, Math.round((worldX + 1) * 0.5 * this.cellsX)));
     };
 
-    View.prototype.toCellY = function (worldX) {
-        return Math.round((worldY + 1) * 0.5 * this.cellsY);
+    View.prototype.toCellY = function (worldY) {
+        return Math.min(this.cellsY, Math.max(0, Math.round((worldY + 1) * 0.5 * this.cellsY)));
     };
 
     View.prototype.toWorldX = function (cellX) {
@@ -213,6 +256,13 @@ var WAVES = (function () {
     View.prototype.toWorldY = function (cellY) {
         var half = this.cellsY * 0.5;
         return (cellY - half) / half;
+    };
+
+    View.prototype.getHeight = function (worldX, worldY) {
+        var cellX = this.toCellX(worldX),
+            cellY = this.toCellY(worldY);
+
+        return this.cells[((cellY * this.cellsX) + cellX) * CELL_SIZE + this.hA] * VERTICAL_SCALE;
     };
 
     function updateMeshVertex(mesh, index, z, b) {
@@ -280,7 +330,7 @@ var WAVES = (function () {
                 this.cells[i + V] = newV;
 
                 if (this.surface) {
-                    updateMeshVertex(this.surface, index, 500 * newH, (100000 * newV + 1) / 2);
+                    updateMeshVertex(this.surface, index, newH * VERTICAL_SCALE, (100000 * newV + 1) / 2);
                 }
                 ++index;
             }
@@ -347,7 +397,9 @@ var WAVES = (function () {
             this.thumpers[t].update(fixedTime);
         }
 
-        this.propagate(2);
+        this.propagate(fixedTime);
+
+        this.boat.update(fixedTime, this);
     };
 
     View.prototype.render = function (room, width, height) {
