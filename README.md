@@ -1,10 +1,14 @@
-# blitblort
-Want to make a simple HTML5 game?
+# Wavebreaker
 
-This library covers the basics of working with canvas, web audio, input and some mathmatical bits to make it easy to create simple games.
+An experiment in wave simulation.
 
-The name is derived from [bit blitting](https://en.wikipedia.org/wiki/Bit_blit) and [blort](https://en.wiktionary.org/wiki/blort) is just about making silly sounds.
+Click/Tap and hold to create waves.
 
-The library has no dependencies other than an HTML5 compliant web browser, so specifically there's no 'build' step. Unfortuantely that also means there's no packaging support.
+Press J and K to change the frequency of created waves.
+Press N and M to change the amplitude of created waves.
 
-It's not even remotely optimized, as it's primary puropose is to make it really easy to extend and modify, while still simplifying the common tasks needed by most games.
+Press O to toggle ocean waves.
+
+Press T to toggle audio generated from the wave surface.
+
+Drive the boat around with WASD or the arrow keys.
