@@ -327,6 +327,7 @@ var WAVES = (function () {
 
         this.oceanCheckbox = document.getElementById("ocean");
         this.tonesCheckbox = document.getElementById("tones");
+        this.boundaryCheckbox = document.getElementById("boundary");
 
         this.velocityScaleSlider = document.getElementById("velocityColor");
 
@@ -355,6 +356,10 @@ var WAVES = (function () {
             if (self.tonesCheckbox.checked != self.tonesActive()) {
                 self.togglePlayback();
             }
+        });
+
+        this.boundaryCheckbox.addEventListener("change", function (e) {
+            self.dampenBoundary = self.boundaryCheckbox.checked;
         });
 
         this.amplitudeSlider.addEventListener("change", function (e) {
