@@ -571,7 +571,7 @@ var WAVES = (function () {
 
     View.prototype.viewOrientation = function () {
         return R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0);
-    }
+    };
 
     View.prototype.viewPosition = function () {
         return new R3.V(0, this.eyeHeight, this.distance);

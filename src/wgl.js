@@ -248,7 +248,7 @@ var WGL = (function () {
         var arrayType = elements ? this.gl.ELEMENT_ARRAY_BUFFER : this.gl.ARRAY_BUFFER;
         this.gl.bindBuffer(arrayType, buffer);
         this.gl.bufferData(arrayType, new Float32Array(data), hint);
-    }
+    };
 
     Room.prototype.setupFloatBuffer = function (data, elements, hint) {
         return this.setupBuffer(new Float32Array(data), elements, hint);
@@ -388,7 +388,7 @@ var WGL = (function () {
 
     Room.prototype.stabDirection = function(canvasX, canvasY, viewportRegion) {
         return this.viewer.stabDirection(this.canvas, canvasX, canvasY, viewportRegion);
-    }
+    };
 
     Room.prototype.setupDrawTest = function (program) {
         var vertices = [
