@@ -8,6 +8,7 @@ var WAVES = (function () {
         FORCE_SCALE = 0.4,
         DECAY_TIME = 200,
         VERTICAL_SCALE = 500,
+        VELOCITY_SCALE_MAX = 200000,
         MIN_FREQUENCY = Math.PI/256,
         MAX_FREQUENCY = Math.PI/4,
         MAX_AMPLITUDE = 0.005;
@@ -291,6 +292,7 @@ var WAVES = (function () {
         this.time = 0;
 
         this.dampenBoundary = false;
+        this.velocityScale = 100000;
 
         this.clickThumper = new Thumper(new RegionPoint(this.cellsX / 2, this.cellsY / 2), true);
         this.ocean = new Thumper(new RegionLineY(0, 0, this.cellsX), false, Math.PI/100, 0.0001);
@@ -304,6 +306,7 @@ var WAVES = (function () {
         this.oceanCheckbox = document.getElementById("ocean");
         this.tonesCheckbox = document.getElementById("tones");
 
+        this.velocityScaleSlider = document.getElementById("velocityColor");
 
         this.thumpers = [this.clickThumper, this.ocean];
 
@@ -388,7 +391,8 @@ var WAVES = (function () {
             hOut = this.hB,
             lastX = this.cellsX - 1,
             lastY = this.cellsY - 1,
-            decay = Math.max(0, (DECAY_TIME - elapsed) / DECAY_TIME);
+            decay = Math.max(0, (DECAY_TIME - elapsed) / DECAY_TIME),
+            velocityColorScale = (this.velocityScaleSlider.value / 100) * VELOCITY_SCALE_MAX;
 
         if (this.boat.velocity > (this.boat.maxVelocity * 0.1)) {
             var boatX = this.toCellX(this.boat.position.x),
@@ -447,7 +451,11 @@ var WAVES = (function () {
                 this.cells[i + V] = newV;
 
                 if (this.surface) {
-                    updateMeshVertex(this.surface, index, newH * VERTICAL_SCALE, (100000 * newV + 1) / 2);
+                    updateMeshVertex(
+                        this.surface, index,
+                        newH * VERTICAL_SCALE,
+                        (velocityColorScale * newV + 1) / 2
+                    );
                 }
                 ++index;
             }
