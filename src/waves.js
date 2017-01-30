@@ -287,6 +287,8 @@ var WAVES = (function () {
         this.clickThumper = new Thumper(new RegionPoint(this.cellsX / 2, this.cellsY / 2), true);
         this.ocean = new Thumper(new RegionLineY(0, 0, this.cellsX), false, Math.PI/100, 0.0001);
 
+        this.oceanCheckbox = document.getElementById("ocean");
+
         this.thumpers = [this.clickThumper, this.ocean];
 
         this.boat = new Boat();
@@ -295,7 +297,25 @@ var WAVES = (function () {
         this.meshes = [this.surface, this.boat.mesh];
 
         this.audioPlayback = null;
+
+        var self = this;
+
+        this.updateControls();
+
+        this.oceanCheckbox.addEventListener("change", function (e) {
+            if (self.oceanCheckbox.checked) {
+                self.ocean.start(true);
+            } else {
+                self.ocean.stop();
+            }
+        });
     }
+
+    View.prototype.updateControls = function() {
+        if (this.oceanCheckbox.checked != this.ocean.active) {
+            this.oceanCheckbox.checked = this.ocean.active;
+        }
+    };
 
     View.prototype.toCellX = function (worldX) {
         return clamp(Math.round((worldX + 1) * 0.5 * this.cellsX), 0, this.cellsX - 1);
@@ -454,10 +474,11 @@ var WAVES = (function () {
             } else {
                 this.ocean.stop();
             }
+            this.updateControls();
         }
 
         if (keyboard.wasAsciiPressed("T")) {
-            if (this.audioPlayback == null) {
+            if (this.audioPlayback === null) {
                 var self = this;
                 this.audioPlayback = BLORT.playDynamic(
                     function (audioProcessingEvent) {
@@ -591,7 +612,7 @@ var WAVES = (function () {
             v = y / (this.cellsY - 1),
             normal = new R3.V(0, 0, 1);
         mesh.addVertex(vertex, normal, u, v, 1, 0, 0, 1);
-    }
+    };
 
     function addTris(mesh, index, stride) {
         mesh.addTri(index,    index + stride, index + 1);
