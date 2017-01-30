@@ -7,7 +7,10 @@ var WAVES = (function () {
         CELL_SIZE = 3,
         FORCE_SCALE = 0.4,
         DECAY_TIME = 200,
-        VERTICAL_SCALE = 500;
+        VERTICAL_SCALE = 500,
+        MIN_FREQUENCY = Math.PI/256,
+        MAX_FREQUENCY = Math.PI/4,
+        MAX_AMPLITUDE = 0.005;
 
     function clamp(v, min, max) {
         return Math.max(min, Math.min(max, v));
@@ -206,12 +209,17 @@ var WAVES = (function () {
     }
 
     Thumper.prototype.scaleFrequency = function (factor) {
-        this.frequency *= factor;
-        this.time /= factor;
+        this.setFrequency(this.frequency * factor);
+    };
+
+    Thumper.prototype.setFrequency = function (frequency) {
+        var prevFrequency = this.frequency;
+        this.frequency = clamp(frequency, MIN_FREQUENCY, MAX_FREQUENCY);
+        this.time *= this.frequency / prevFrequency;
     };
 
     Thumper.prototype.scaleAmplitude = function (factor) {
-        this.amplitude *= factor;
+        this.amplitude = Math.min(this.amplitude * factor, MAX_AMPLITUDE);
     };
 
     Thumper.prototype.includes = function (x, y) {
@@ -287,8 +295,15 @@ var WAVES = (function () {
         this.clickThumper = new Thumper(new RegionPoint(this.cellsX / 2, this.cellsY / 2), true);
         this.ocean = new Thumper(new RegionLineY(0, 0, this.cellsX), false, Math.PI/100, 0.0001);
 
+        this.amplitudeSlider = document.getElementById("amplitude");
+        this.frequencySlider = document.getElementById("frequency");
+
+        this.oceanAmplitudeSlider = document.getElementById("oceanAmplitude");
+        this.oceanFrequencySlider = document.getElementById("oceanFrequency");
+
         this.oceanCheckbox = document.getElementById("ocean");
         this.tonesCheckbox = document.getElementById("tones");
+
 
         this.thumpers = [this.clickThumper, this.ocean];
 
