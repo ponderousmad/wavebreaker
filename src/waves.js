@@ -18,6 +18,23 @@ var WAVES = (function () {
         return Math.max(min, Math.min(max, v));
     }
 
+    function frequencyToSliderValue(frequency) {
+        var low = MIN_FREQUENCY,
+            high = MAX_FREQUENCY,
+            range = high - low,
+            fraction = (frequency - low) / range;
+        return fraction * SLIDER_MAX;
+    }
+
+    function sliderValueToFrequency(value) {
+        var low = MIN_FREQUENCY,
+            high = MAX_FREQUENCY,
+            range = high - low,
+            fraction = value / SLIDER_MAX,
+            scaled = fraction * range;
+        return (scaled + low);
+    }
+
     function Boat() {
         var bow = new R3.V(0.0, 1.0, 0.1),
             base = new R3.V(0.0, -1.0, -0.20),
@@ -344,8 +361,16 @@ var WAVES = (function () {
             self.clickThumper.setAmplitude(self.amplitudeSlider.value * MAX_AMPLITUDE / SLIDER_MAX);
         });
 
+        this.frequencySlider.addEventListener("change", function (e) {
+            self.clickThumper.setFrequency(sliderValueToFrequency(self.frequencySlider.value));
+        });
+
         this.oceanAmplitudeSlider.addEventListener("change", function (e) {
             self.ocean.setAmplitude(self.oceanAmplitudeSlider.value * MAX_AMPLITUDE / SLIDER_MAX);
+        });
+
+        this.oceanFrequencySlider.addEventListener("change", function (e) {
+            self.ocean.setFrequency(sliderValueToFrequency(self.oceanFrequencySlider.value));
         });
     }
 
@@ -363,6 +388,8 @@ var WAVES = (function () {
 
         this.amplitudeSlider.value = SLIDER_MAX * this.clickThumper.amplitude / MAX_AMPLITUDE;
         this.oceanAmplitudeSlider.value = SLIDER_MAX * this.ocean.amplitude / MAX_AMPLITUDE;
+        this.frequencySlider.value = frequencyToSliderValue(this.clickThumper.frequency);
+        this.oceanFrequencySlider.value = frequencyToSliderValue(this.ocean.frequency);
     };
 
     View.prototype.toCellX = function (worldX) {
