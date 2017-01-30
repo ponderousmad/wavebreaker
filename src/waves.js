@@ -288,6 +288,7 @@ var WAVES = (function () {
         this.ocean = new Thumper(new RegionLineY(0, 0, this.cellsX), false, Math.PI/100, 0.0001);
 
         this.oceanCheckbox = document.getElementById("ocean");
+        this.tonesCheckbox = document.getElementById("tones");
 
         this.thumpers = [this.clickThumper, this.ocean];
 
@@ -309,11 +310,24 @@ var WAVES = (function () {
                 self.ocean.stop();
             }
         });
+
+        this.tonesCheckbox.addEventListener("change", function (e) {
+            if (self.tonesCheckbox.checked != self.tonesActive()) {
+                self.togglePlayback();
+            }
+        });
     }
+
+    View.prototype.tonesActive = function() {
+        return this.audioPlayback !== null;
+    };
 
     View.prototype.updateControls = function() {
         if (this.oceanCheckbox.checked != this.ocean.active) {
             this.oceanCheckbox.checked = this.ocean.active;
+        }
+        if (this.tonesCheckbox.checked != this.tonesActive()) {
+            this.tonesCheckbox.checked = this.tonesActive();
         }
     };
 
@@ -452,20 +466,39 @@ var WAVES = (function () {
         this.room = room;
     };
 
+    View.prototype.togglePlayback = function () {
+        if (this.audioPlayback === null) {
+            var self = this;
+            this.audioPlayback = BLORT.playDynamic(
+                function (audioProcessingEvent) {
+                    self.soundWaves(audioProcessingEvent);
+                }, 4096
+            );
+        } else {
+            this.audioPlayback();
+            this.audioPlayback = null;
+        }
+    };
+
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
-        var fixedTime = 2;
+        var fixedTime = 2,
+            uiChange = false;
         this.time += fixedTime;
 
         if (keyboard.wasAsciiPressed("K")) {
             this.clickThumper.scaleFrequency(2);
+            uiChange = true;
         } else if(keyboard.wasAsciiPressed("J")) {
             this.clickThumper.scaleFrequency(0.5);
+            uiChange = true;
         }
 
         if (keyboard.wasAsciiPressed("M")) {
             this.clickThumper.scaleAmplitude(2);
+            uiChange = true;
         } else if(keyboard.wasAsciiPressed("N")) {
             this.clickThumper.scaleAmplitude(0.5);
+            uiChange = true;
         }
 
         if (keyboard.wasAsciiPressed("O")) {
@@ -474,21 +507,16 @@ var WAVES = (function () {
             } else {
                 this.ocean.stop();
             }
-            this.updateControls();
+            uiChange = true;
         }
 
         if (keyboard.wasAsciiPressed("T")) {
-            if (this.audioPlayback === null) {
-                var self = this;
-                this.audioPlayback = BLORT.playDynamic(
-                    function (audioProcessingEvent) {
-                        self.soundWaves(audioProcessingEvent);
-                    }, 4096
-                );
-            } else {
-                this.audioPlayback();
-                this.audioPlayback = null;
-            }
+            this.togglePlayback();
+            uiChange = true;
+        }
+
+        if (uiChange) {
+            this.updateControls();
         }
 
         var forward = false,
