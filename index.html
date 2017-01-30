@@ -24,6 +24,39 @@
             </canvas>
             </span>
             <div id="testResult"></div>
+            <div class="controls" id="controls">
+                <div class="menuBorder">
+                    <div class="menuToggle">
+                        <a href="javascript:void(0)" id="menuButton"><div class="hamburger"></div></a>
+                    </div>
+                </div>
+                <form>
+                    <div>
+                        Thumper:
+                        <div class="slider">
+                            <span>Amplitude: <input class="slider" id="amplitude" type="range" min="0" max="100" value="50"></span>
+                        </div>
+                        <div class="slider">
+                            <span>Frequency: <input class="slider" id="frequency" type="range" min="0" max="100" value="50"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <span>
+                            <u>O</u>cean: <input type="checkbox" id="ocean" checked />
+                        </span>
+                        <div class="slider">
+                            <span>Amplitude: <input class="slider" id="amplitude" type="range" min="0" max="100" value="50"></span>
+                        </div>
+                        <div class="slider">
+                            <span>Frequency: <input class="slider" id="frequency" type="range" min="0" max="100" value="50"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <button id="enterVR" type="button" class="hidden">Enter VR</button>
+                        <button id="exitVR" type="button" class="hidden">Exit VR</button>
+                    </div>
+                </form>
+            </div>
         </div>
         <script id="vertex-test" type="x-shader/x-vertex">
             attribute vec3 aPos;
