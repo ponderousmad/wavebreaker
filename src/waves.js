@@ -11,7 +11,8 @@ var WAVES = (function () {
         VELOCITY_SCALE_MAX = 200000,
         MIN_FREQUENCY = Math.PI/256,
         MAX_FREQUENCY = Math.PI/4,
-        MAX_AMPLITUDE = 0.005;
+        MAX_AMPLITUDE = 0.005,
+        SLIDER_MAX = 100;
 
     function clamp(v, min, max) {
         return Math.max(min, Math.min(max, v));
@@ -220,7 +221,11 @@ var WAVES = (function () {
     };
 
     Thumper.prototype.scaleAmplitude = function (factor) {
-        this.amplitude = Math.min(this.amplitude * factor, MAX_AMPLITUDE);
+        this.setAmplitude(this.amplitude * factor);
+    };
+
+    Thumper.prototype.setAmplitude = function (amplitude) {
+        this.amplitude = clamp(amplitude, 0, MAX_AMPLITUDE);
     };
 
     Thumper.prototype.includes = function (x, y) {
@@ -334,6 +339,14 @@ var WAVES = (function () {
                 self.togglePlayback();
             }
         });
+
+        this.amplitudeSlider.addEventListener("change", function (e) {
+            self.clickThumper.setAmplitude(self.amplitudeSlider.value * MAX_AMPLITUDE / SLIDER_MAX);
+        });
+
+        this.oceanAmplitudeSlider.addEventListener("change", function (e) {
+            self.ocean.setAmplitude(self.oceanAmplitudeSlider.value * MAX_AMPLITUDE / SLIDER_MAX);
+        });
     }
 
     View.prototype.tonesActive = function() {
@@ -347,6 +360,9 @@ var WAVES = (function () {
         if (this.tonesCheckbox.checked != this.tonesActive()) {
             this.tonesCheckbox.checked = this.tonesActive();
         }
+
+        this.amplitudeSlider.value = SLIDER_MAX * this.clickThumper.amplitude / MAX_AMPLITUDE;
+        this.oceanAmplitudeSlider.value = SLIDER_MAX * this.ocean.amplitude / MAX_AMPLITUDE;
     };
 
     View.prototype.toCellX = function (worldX) {
