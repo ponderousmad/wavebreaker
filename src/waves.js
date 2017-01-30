@@ -617,13 +617,26 @@ var WAVES = (function () {
 
     window.onload = function(e) {
         var canvas = document.getElementById("canvas3D"),
-            view = new View();
+            view = new View(),
+            controls = document.getElementById("controls"),
+            menuButton = document.getElementById("menuButton"),
+            controlsVisible = false;
 
         canvas.tabIndex = 1000; // Hack to get canvas to accept keyboard input.
         view.inputElement = canvas;
 
         var room = MAIN.start(canvas, view);
         view.setRoom(room);
+
+
+        menuButton.addEventListener("click", function(e) {
+            controlsVisible = !controlsVisible;
+            var slide = controlsVisible ? " slideIn" : "";
+            controls.className = "controls" + slide;
+            e.preventDefault = true;
+            return false;
+        });
+
         MAIN.runTestSuites();
     };
 
