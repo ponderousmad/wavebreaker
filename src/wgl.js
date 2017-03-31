@@ -247,11 +247,11 @@ var WGL = (function () {
         var hint = this.gl.DYNAMIC_DRAW;
         var arrayType = elements ? this.gl.ELEMENT_ARRAY_BUFFER : this.gl.ARRAY_BUFFER;
         this.gl.bindBuffer(arrayType, buffer);
-        this.gl.bufferData(arrayType, new Float32Array(data), hint);
+        this.gl.bufferData(arrayType, data, hint);
     };
 
     Room.prototype.setupFloatBuffer = function (data, elements, hint) {
-        return this.setupBuffer(new Float32Array(data), elements, hint);
+        return this.setupBuffer(data, elements, hint);
     };
 
     Room.prototype.setupElementBuffer = function (data, hint) {
@@ -292,10 +292,10 @@ var WGL = (function () {
             var drawHint = dynamic ? this.gl.DYNAMIC_DRAW : this.gl.STATIC_DRAW;
 
             mesh.drawData = {
-                vertexBuffer: this.setupFloatBuffer(mesh.vertices, false, drawHint),
-                normalBuffer: this.setupFloatBuffer(mesh.normals),
-                uvBuffer: this.setupFloatBuffer(mesh.uvs),
-                colorBuffer: this.setupFloatBuffer(mesh.colors, false, drawHint),
+                vertexBuffer: this.setupFloatBuffer(mesh.glVertices, false, drawHint),
+                normalBuffer: this.setupFloatBuffer(mesh.glNormals),
+                uvBuffer: this.setupFloatBuffer(mesh.glUVs),
+                colorBuffer: this.setupFloatBuffer(mesh.glColors, false, drawHint),
                 triBuffer: this.setupElementBuffer(mesh.tris)
             };
             if (mesh.image) {
@@ -314,7 +314,7 @@ var WGL = (function () {
 
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.vertexBuffer);
         if (mesh.updated) {
-            this.updateBuffer(draw.vertexBuffer, mesh.vertices);
+            this.updateBuffer(draw.vertexBuffer, mesh.glVertices);
         }
         this.gl.vertexAttribPointer(program.vertexPosition, 3, this.gl.FLOAT, false, 0, 0);
         if (program.vertexNormal !== null) {
@@ -328,7 +328,7 @@ var WGL = (function () {
         if (program.vertexColor !== null) {
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, draw.colorBuffer);
             if (mesh.updated) {
-                this.updateBuffer(draw.colorBuffer, mesh.colors);
+                this.updateBuffer(draw.colorBuffer, mesh.glColors);
             }
             this.gl.vertexAttribPointer(program.vertexColor, 4, this.gl.FLOAT, false, 0, 0);
         }
@@ -391,24 +391,24 @@ var WGL = (function () {
     };
 
     Room.prototype.setupDrawTest = function (program) {
-        var vertices = [
+        var vertices = new Float32Array([
                 -1.0, -1.0, 0.0,
                  1.0, -1.0, 0.0,
                 -1.0,  1.0, 0.0,
                  1.0,  1.0, 0.0
-            ],
-            uvs = [
+            ]),
+            uvs = new Float32Array([
                 0.0,  1.0,
                 1.0,  1.0,
                 0.0,  0.0,
                 1.0,  0.0
-            ],
-            colors = [
+            ]),
+            colors = new Float32Array([
                 1.0, 0.0, 1.0, 1.0,
                 1.0, 1.0, 0.0, 1.0,
                 0.0, 1.0, 1.0, 1.0,
                 1.0, 1.0, 1.0, 1.0
-            ];
+            ]);
 
         program.batch = new BLIT.Batch("images/");
         program.square = this.setupFloatBuffer(vertices);
@@ -522,6 +522,10 @@ var WGL = (function () {
                 this.colors.push(0);
             }
         }
+        this.glVertices = new Float32Array(this.vertices);
+        this.glUVs = new Float32Array(this.uvs);
+        this.glColors = new Float32Array(this.colors);
+        this.glNormals = new Float32Array(this.normals);
     };
 
     function makeCube() {

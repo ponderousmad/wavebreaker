@@ -423,9 +423,9 @@ var WAVES = (function () {
     };
 
     function updateMeshVertex(mesh, index, z, b) {
-        mesh.vertices[index * 3 + 2] = z;
-        mesh.colors[index * 4 + 0] = 1 - b;
-        mesh.colors[index * 4 + 2] = b;
+        mesh.glVertices[index * 3 + 2] = z;
+        mesh.glColors[index * 4 + 0] = 1 - b;
+        mesh.glColors[index * 4 + 2] = b;
         mesh.updated = true;
     }
 
@@ -732,6 +732,7 @@ var WAVES = (function () {
                 this.calculateVertex(mesh, x, y);
             }
         }
+        mesh.finalize();
         return mesh;
     };
 
