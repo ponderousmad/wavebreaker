@@ -43,8 +43,8 @@ var WAVES = (function () {
             keel = R3.subVectors(bow, base),
             points = [
                 bow, left, right,
-                bow, left, base,
-                bow, base, right,
+                bow, base, left,
+                bow, right, base,
                 base, right, left
             ],
             faceNormals = [
