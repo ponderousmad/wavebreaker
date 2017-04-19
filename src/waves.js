@@ -293,6 +293,7 @@ var WAVES = (function () {
         this.updateInterval = 15;
         this.consumeKeys = true;
         this.canvasInputOnly = true;
+        this.vrToggleIDs = { enter: "enterVR", exit: "exitVR" };
         this.meshes = null;
         this.program = null;
         this.yAxisAngle = 0;
@@ -663,14 +664,12 @@ var WAVES = (function () {
         }
         if (room.viewer.inVR()) {
             var vrFrame = room.viewer.vrFrame(),
-                pivot = new R3.V(0, 0, this.eyeHeight),
-                m = r3.identity();
+                m = R3.identity();
             room.viewer.orientation.set(0, 0, 0, 1);
             room.viewer.position.set(0, 0, 0);
 
-            m.translate(R3.toOrigin(pivot));
-            m = R3.matmul(R3.makeRotateQ(R3.eulerToQ(this.xAxisAngle, this.yAxisAngle, 0)), m);
-            m.translate(new R3.V(0, 0, this.distance - this.center.z));
+            m.translate(new R3.V(0, 1, -this.distance));
+            m = R3.matmul(R3.makeRotateQ(R3.eulerToQ(-90 * R2.DEG_TO_RAD, 0, Math.PI)), m);
 
             var eyes = ["left", "right"],
                 views = [vrFrame.leftViewMatrix, vrFrame.rightViewMatrix];

@@ -93,16 +93,13 @@ var WGL = (function () {
         return R3.perspective(this.fov * R2.DEG_TO_RAD, aspect, this.near, this.far);
     };
 
-    Viewer.prototype.perspectiveFOV = function (eye) {
-        return R3.perspectiveFOV(eye.fieldOfView, this.near, this.far);
+    Viewer.prototype.perspectiveVR = function (region, frameData) {
+        return new R3.M(region == "left" ? frameData.leftProjectionMatrix : frameData.rightProjectionMatrix);
     };
 
-    Viewer.prototype.view = function (eye) {
+    Viewer.prototype.view = function () {
         var m = R3.makeRotateQ(this.orientation);
         m.translate(R3.toOrigin(this.position));
-        if (eye) {
-            m.translate(new R3.V(-eye.offset[0], -eye.offset[1], -eye.offset[2]));
-        }
         return m;
     };
 
@@ -142,16 +139,15 @@ var WGL = (function () {
         }
     };
 
-    Viewer.prototype.vrPose = function () {
-        return this.vrDisplay.getPose();
+    Viewer.prototype.vrFrame = function () {
+        if (this.vrDisplay && this.vrDisplay.getFrameData(this.vrFrameData)) {
+            return this.vrFrameData;
+        }
+        return null;
     };
 
-    Viewer.prototype.vrEye = function (eye) {
-        return this.vrDisplay.getEyeParameters(eye);
-    };
-
-    Viewer.prototype.submitVR = function (pose) {
-        this.vrDisplay.submitFrame(pose);
+    Viewer.prototype.submitVR = function () {
+        this.vrDisplay.submitFrame();
     };
 
     Viewer.prototype.stabDirection = function (canvas, canvasX, canvasY, viewportRegion) {
@@ -340,11 +336,11 @@ var WGL = (function () {
         mesh.updated = false;
     };
 
-    Room.prototype.setupView = function (program, viewportRegion, transform, eye) {
+    Room.prototype.setupView = function (program, viewportRegion, transform, vrFrame) {
         var shader = program.shader,
             aspect = this.viewer.viewport(this.gl, this.canvas, viewportRegion),
-            perspective = eye ? this.viewer.perspectiveFOV(eye) : this.viewer.perspective(aspect),
-            view = this.viewer.view(eye),
+            perspective = vrFrame ? this.viewer.perspectiveVR(viewportRegion, vrFrame) : this.viewer.perspective(aspect),
+            view = this.viewer.view(),
             pLocation = this.gl.getUniformLocation(shader, program.perspectiveUniform),
             vLocation = this.gl.getUniformLocation(shader, program.mvUniform),
             nLocation = program.normalUniform ? this.gl.getUniformLocation(shader, program.normalUniform) : null;
@@ -354,8 +350,7 @@ var WGL = (function () {
         this.gl.uniformMatrix4fv(pLocation, false, perspective.m);
         this.gl.uniformMatrix4fv(vLocation, false, view.m);
         if (nLocation) {
-            var normal = view.inverse();
-            normal.transpose();
+            var normal = R3.identity();
             this.gl.uniformMatrix4fv(nLocation, false, normal.m);
         }
         program.view = view;
@@ -368,7 +363,7 @@ var WGL = (function () {
             nLocation = this.gl.getUniformLocation(shader, program.normalUniform);
         R3.matmul(program.view, transform, modelView);
         this.gl.uniformMatrix4fv(vLocation, false, modelView.m);
-        var normal = modelView.inverse();
+        var normal = transform.inverse();
         normal.transpose();
         this.gl.uniformMatrix4fv(nLocation, false, normal.m);
     };
