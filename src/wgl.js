@@ -429,6 +429,12 @@ var WGL = (function () {
                 -1.0,  1.0, 0.0,
                  1.0,  1.0, 0.0
             ]),
+            normals = new Float32Array([
+                0.0, 0.0, 1.0,
+                0.0, 0.0, 1.0,
+                0.0, 0.0, 1.0,
+                0.0, 0.0, 1.0
+            ]),
             uvs = new Float32Array([
                 0.0,  1.0,
                 1.0,  1.0,
@@ -444,6 +450,7 @@ var WGL = (function () {
 
         program.batch = new BLIT.Batch("images/");
         program.square = this.setupFloatBuffer(vertices);
+        program.squareNormals = this.setupFloatBuffer(normals);
         program.squareUVs = this.setupFloatBuffer(uvs);
         program.squareColors = this.setupFloatBuffer(colors);
         program.squareTexture = this.loadTexture(program.batch, "uv.png");
@@ -454,6 +461,10 @@ var WGL = (function () {
         this.bindTexture(setup.shader, setup.textureVariable, setup.squareTexture);
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, setup.square);
         this.gl.vertexAttribPointer(setup.vertexPosition, 3, this.gl.FLOAT, false, 0, 0);
+        if (setup.vertexNormal !== null) {
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, setup.squareNormals);
+            this.gl.vertexAttribPointer(setup.vertexNormal, 3, this.gl.FLOAT, false, 0, 0);
+        }
         if (setup.vertexUV !== null) {
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, setup.squareUVs);
             this.gl.vertexAttribPointer(setup.vertexUV, 2, this.gl.FLOAT, false, 0, 0);
@@ -472,6 +483,7 @@ var WGL = (function () {
             this.testSetup = {
                 shader: program,
                 vertexPosition: this.bindVertexAttribute(program, "aPos"),
+                vertexNormal: this.bindVertexAttribute(program, "aNormal"),
                 vertexUV: this.bindVertexAttribute(program, "aUV"),
                 vertexColor: this.bindVertexAttribute(program, "aColor"),
                 mvUniform: "uMVMatrix",
