@@ -61,7 +61,8 @@ var WGL = (function () {
 
     function Viewer() {
         this.position = R3.origin();
-        this.orientation = R3.zeroQ();
+        this.forward = new R3.V(0, 1, 0);
+        this.up = new R3.V(0, 0, 1);
         this.fov = 90;
         this.near = 0.1;
         this.far = 100;
@@ -70,6 +71,17 @@ var WGL = (function () {
         this.safeSize = new R2.V(0, 0);
         this.vrFrameData = null;
     }
+
+    Viewer.prototype.positionView = function (position, target, up) {
+        this.position = position.copy();
+        if (target) {
+            this.forward = R3.subVectors(target, position);
+            this.forward.normalize();
+        }
+        if (up) {
+            this.up = up.normalized();
+        }
+    };
 
     Viewer.prototype.setVRDisplay = function (vrDisplay) {
         this.vrDisplay = vrDisplay;
@@ -98,8 +110,20 @@ var WGL = (function () {
     };
 
     Viewer.prototype.view = function () {
-        var m = R3.makeRotateQ(this.orientation);
-        m.translate(R3.toOrigin(this.position));
+        var forward = this.forward.scaled(1);
+        var right = forward.cross(this.up);
+        right.normalize();
+        var up = right.cross(forward);
+        up.normalize();
+        var posX = -right.dot(this.position);
+        var posY = -up.dot(this.position);
+        var posZ = forward.dot(this.position);
+        var m = new R3.M([
+            right.x, up.x, -forward.x, 0,
+            right.y, up.y, -forward.y, 0,
+            right.z, up.z, -forward.z, 0,
+            posX, posY, posZ, 1
+        ]);
         return m;
     };
 
@@ -150,7 +174,7 @@ var WGL = (function () {
         this.vrDisplay.submitFrame();
     };
 
-    Viewer.prototype.stabDirection = function (canvas, canvasX, canvasY, viewportRegion) {
+    Viewer.prototype.normalizedStabPoint = function (canvas, canvasX, canvasY, viewportRegion) {
         var width = canvas.width,
             height = canvas.height;
         if (viewportRegion == "safe") {
@@ -168,6 +192,19 @@ var WGL = (function () {
             normalizedY * viewScale * aspect,
             -1
         );
+    };
+
+    Viewer.prototype.stabDirection = function (canvas, canvasX, canvasY, viewportRegion) {
+        var right = this.forward.cross(this.up);
+        right.normalize();
+        var up = right.cross(this.forward);
+        up.normalize();
+
+        var point = this.normalizedStabPoint(canvas, canvasX, canvasY, viewportRegion),
+            stab = this.forward.normalized();
+        stab.addScaled(right, point.x);
+        stab.addScaled(up, point.y);
+        return stab;
     };
 
     function Room(canvas) {
@@ -345,7 +382,7 @@ var WGL = (function () {
             vLocation = this.gl.getUniformLocation(shader, program.mvUniform),
             nLocation = program.normalUniform ? this.gl.getUniformLocation(shader, program.normalUniform) : null;
         if (transform) {
-            view = R3.matmul(view, transform);
+            view = R3.matmul(transform, view);
         }
         this.gl.uniformMatrix4fv(pLocation, false, perspective.m);
         this.gl.uniformMatrix4fv(vLocation, false, view.m);

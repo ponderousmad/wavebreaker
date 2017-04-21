@@ -299,9 +299,10 @@ var WAVES = (function () {
         this.yAxisAngle = 0;
         this.xAxisAngle = -Math.PI/5;
         this.room = null;
-        this.distance = 1.5;
-        this.center = new R3.V(0, 0, 0);
-        this.eyeHeight = -0.3;
+        this.distance = 1.3;
+        this.forward = new R3.V(0, 1, -1.5);
+        this.forward.normalize();
+        this.target = new R3.V(0, -0.3, 0);
 
         this.cellsX = 254;
         this.cellsY = 256;
@@ -610,11 +611,9 @@ var WAVES = (function () {
         }
 
         if (pointer.primary) {
-            var orientation = this.viewOrientation(),
-                viewStab = this.room.stabDirection(pointer.primary.x, pointer.primary.y, "safe"),
-                stabDir = R3.makeRotateQ(orientation.inverse()).transform(viewStab),
-                stab = R3.makeRotateQ(orientation).transformP(this.viewPosition());
-            stab.addScaled(stabDir, -stab.z / stabDir.z);
+            var stabDir = this.room.stabDirection(pointer.primary.x, pointer.primary.y, "safe"),
+                eyePos = this.room.viewer.position,
+                stab = R3.subVectors(eyePos, stabDir.scaled(eyePos.z / stabDir.z));
 
             var xCell = Math.round((stab.x + 1) * 0.5 * this.cellsX),
                 yCell = Math.round((stab.y + 1) * 0.5 * this.cellsY);
@@ -656,7 +655,6 @@ var WAVES = (function () {
                 vertexColor: room.bindVertexAttribute(shader, "aColor"),
                 textureVariable: "uSampler"
             };
-            room.viewer.position.set(0, 0, 2);
             room.gl.enable(room.gl.CULL_FACE);
         }
         if (!this.batch.loaded) {
@@ -664,24 +662,20 @@ var WAVES = (function () {
         }
         if (room.viewer.inVR()) {
             var vrFrame = room.viewer.vrFrame(),
-                m = R3.identity();
-            room.viewer.orientation.set(0, 0, 0, 1);
-            room.viewer.position.set(0, 0, 0);
-
-            m.translate(new R3.V(0, 1, -this.distance));
-            m = R3.matmul(R3.makeRotateQ(R3.eulerToQ(-90 * R2.DEG_TO_RAD, 0, Math.PI)), m);
-
-            var eyes = ["left", "right"],
-                views = [vrFrame.leftViewMatrix, vrFrame.rightViewMatrix];
+                eyes = ["left", "right"],
+                views = [vrFrame.leftViewMatrix, vrFrame.rightViewMatrix],
+                eyeHeight = 0.5,
+                vrTarget = R3.addVectors(this.target, new R3.V(0, 0, eyeHeight)),
+                vrPos = R3.subVectors(vrTarget, new R3.V(0, this.distance, 0));
+            room.viewer.positionView(vrPos, vrTarget);
             for (var e = 0; e < eyes.length; ++e) {
-                var viewMatrix = R3.matmul(new R3.M(views[e]), m);
-                room.setupView(this.program, eyes[e], viewMatrix, vrFrame);
+                room.setupView(this.program, eyes[e], new R3.M(views[e]), vrFrame);
                 this.drawMeshes(room);
             }
             room.viewer.submitVR();
         }
-        room.viewer.orientation = this.viewOrientation();
-        room.viewer.position = this.viewPosition();
+        var position = R3.subVectors(this.target, this.forward.scaled(this.distance));
+        room.viewer.positionView(position, this.target);
         if (room.viewer.showOnPrimary()) {
             room.setupView(this.program, "safe");
             this.drawMeshes(room);
