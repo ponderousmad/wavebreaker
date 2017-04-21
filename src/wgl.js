@@ -474,16 +474,19 @@ var WGL = (function () {
                 vertexPosition: this.bindVertexAttribute(program, "aPos"),
                 vertexUV: this.bindVertexAttribute(program, "aUV"),
                 vertexColor: this.bindVertexAttribute(program, "aColor"),
+                mvUniform: "uMVMatrix",
+                perspectiveUniform: "uPMatrix",
+                normalUniform: "uNormalMatrix",
                 textureVariable: "uSampler"
             };
 
             this.setupDrawTest(this.testSetup);
-            this.viewer.position.set(0, 0, 2);
+            this.viewer.positionView(new R3.V(0, 0, 1.5), R3.origin(), new R3.V(0, 1, 0))
         }
         if (!this.testSetup.batch.loaded) {
             return;
         }
-        this.setupView(this.testSetup.shader, "canvas", "uMVMatrix", "uPMatrix");
+        this.setupView(this.testSetup, "canvas");
         this.drawTestSquare(this.testSetup);
     };
 
