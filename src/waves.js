@@ -49,8 +49,8 @@ var WAVES = (function () {
             ],
             faceNormals = [
                 new R3.V(0, 0, 1),
-                keel.cross(R3.subVectors(left, base)),
-                keel.cross(R3.subVectors(left, keel)),
+                keel.cross(R3.subVectors(base, left)),
+                keel.cross(R3.subVectors(keel, left)),
                 new R3.V(0, -1, 0),
             ],
             mesh = new WGL.Mesh();
