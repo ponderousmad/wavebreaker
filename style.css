@@ -5,6 +5,7 @@ html, body {
     max-width: 100%;
     overflow: hidden;
     overflow-y: hidden;
+    background-color: black;
 }
 
 .slider {
@@ -17,7 +18,7 @@ html, body {
 }
 
 .controls {
-    position: absolute;
+    position: fixed;
     top: 0px;
     left: 100%;
     background-color: rgba(255,255,255,0.5);
