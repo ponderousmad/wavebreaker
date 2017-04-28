@@ -281,11 +281,26 @@ var IO = (function (TICK, BLORT) {
         return this.primary;
     };
 
+    function VRInput() {
+        this.gamepads = [];
+
+        var gamepads = navigator.getGamepads();
+        for (var i = 0; i < gamepads.length; ++i) {
+            var gamepad = gamepads[i];
+            // The array may contain undefined gamepads, so check for that as
+            // well as a non-null pose.
+            if (gamepad && gamepad.pose) {
+                this.gamepads.push(gamepad);
+            }
+        }
+    }
+
     return {
         KEYS: KEYS,
         Keyboard: Keyboard,
         Mouse: Mouse,
         Touch: Touch,
-        Pointer: Pointer
+        Pointer: Pointer,
+        VRInput: VRInput
     };
 }(TICK, BLORT));

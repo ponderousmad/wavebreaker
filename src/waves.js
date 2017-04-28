@@ -553,6 +553,30 @@ var WAVES = (function () {
         }
     };
 
+    View.prototype.getGamepadInput = function() {
+        if (!this.vrInput) {
+            this.vrInput = new IO.VRInput();
+        }
+        var pads = this.vrInput.gamepads;
+
+        for (var p = 0; p < pads.length; ++p) {
+            var gamepad = pads[p];
+            
+            for (var j = 0; j < gamepad.buttons.length; ++j) {
+                if (gamepad.buttons[j].pressed) {
+                    var mat = new R3.M(gamepad.pose),
+                        position = mat.transformP(R3.zero()),
+                        direction = mat.transformV(new R3.V(1, 0, 0));
+                    return R3.subVectors(
+                        position,
+                         stabDir.scaled(position.z / direction.z)
+                    );
+                }
+            }
+        }
+        return null;
+    }
+
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
         var fixedTime = 2,
             uiChange = false;
@@ -610,10 +634,16 @@ var WAVES = (function () {
             this.distance *= (WHEEL_BASE + pointer.wheelY) / WHEEL_BASE;
         }
 
-        if (pointer.primary) {
+        var gamepadInput = this.getGamepadInput();
+
+        if (pointer.primary || gamepadInput !== null) {
             var stabDir = this.room.stabDirection(pointer.primary.x, pointer.primary.y, "safe"),
                 eyePos = this.room.viewer.position,
                 stab = R3.subVectors(eyePos, stabDir.scaled(eyePos.z / stabDir.z));
+
+            if (gamepadInput !== null) {
+                stab = gamepadInput;
+            }
 
             var xCell = Math.round((stab.x + 1) * 0.5 * this.cellsX),
                 yCell = Math.round((stab.y + 1) * 0.5 * this.cellsY);
