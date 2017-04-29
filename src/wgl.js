@@ -566,7 +566,7 @@ var WGL = (function () {
                 this.colors.push(1);
                 this.colors.push(1);
                 this.colors.push(1);
-                this.colors.push(0);
+                this.colors.push(1);
             }
         }
         this.glVertices = new Float32Array(this.vertices);
