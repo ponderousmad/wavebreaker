@@ -575,7 +575,7 @@ var WAVES = (function () {
             }
         }
         return null;
-    }
+    };
 
     View.prototype.update = function (now, elapsed, keyboard, pointer) {
         var fixedTime = 2,
