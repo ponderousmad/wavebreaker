@@ -622,10 +622,10 @@ var WAVES = (function () {
         if (keyboard.isKeyDown(IO.KEYS.Up) || keyboard.isAsciiDown("W")) {
             forward = true;
         }
-        if (keyboard.isKeyDown(IO.KEYS.Left) || keyboard.isAltDown("A")) {
+        if (keyboard.isKeyDown(IO.KEYS.Left) || keyboard.isAsciiDown("A")) {
             steer = 1;
         }
-        if (keyboard.isKeyDown(IO.KEYS.Right) || keyboard.isAltDown("D")) {
+        if (keyboard.isKeyDown(IO.KEYS.Right) || keyboard.isAsciiDown("D")) {
             steer = -1;
         }
 
