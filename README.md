@@ -1,6 +1,8 @@
 # Wavebreaker
 
-An experiment in wave simulation.
+For Global Game Jam 2017
+
+An experiment in wave simulation. 
 
 Click/Tap and hold to create waves.
 
@@ -12,3 +14,5 @@ Press O to toggle ocean waves.
 Press T to toggle audio generated from the wave surface.
 
 Drive the boat around with WASD or the arrow keys.
+
+[Play it here!](https://ponderousmad.com/wavebreaker/index.html)
